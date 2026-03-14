@@ -12,9 +12,10 @@ export type PageType =
   | 'putAway';
 
 export interface NavItem {
-  id: PageType;
+  id: PageType | string;
   label: string;
   icon: string;
+  children?: NavItem[];
 }
 
 export interface StatCardProps {

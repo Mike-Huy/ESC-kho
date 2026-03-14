@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Layout } from './components/Layout';
+import React, { useState, useEffect } from 'react';
+import { Layout, UserData } from './components/Layout';
+import LoginPopup from './components/LoginPopup';
 import { PageType } from './types';
 import Dashboard from './pages/Dashboard';
 import InventoryReport from './pages/InventoryReport';
@@ -15,6 +16,23 @@ import BarcodeScanner from './pages/BarcodeScanner';
 
 const App: React.FC = () => {
   const [activePage, setActivePage] = useState<PageType>('dashboard');
+  const [user, setUser] = useState<UserData | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    // Check for existing session
+    const savedUser = localStorage.getItem('wms_user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+    setIsInitialized(true);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('wms_user');
+    setUser(null);
+    setActivePage('dashboard');
+  };
 
   const renderPage = () => {
     switch (activePage) {
@@ -33,10 +51,20 @@ const App: React.FC = () => {
     }
   };
 
+  if (!isInitialized) return null;
+
   return (
-    <Layout activePage={activePage} setActivePage={setActivePage}>
-      {renderPage()}
-    </Layout>
+    <>
+      {!user && <LoginPopup onLoginSuccess={(userData) => setUser(userData)} />}
+      <Layout 
+        activePage={activePage} 
+        setActivePage={setActivePage} 
+        user={user}
+        onLogout={handleLogout}
+      >
+        {renderPage()}
+      </Layout>
+    </>
   );
 };
 
