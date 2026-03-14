@@ -13,6 +13,7 @@ import OrderDetail from './pages/OrderDetail';
 import TaskProgress from './pages/TaskProgress';
 import StaffCheckIn from './pages/StaffCheckIn';
 import StaffAdmin from './pages/StaffAdmin';
+import StaffList from './pages/StaffList';
 import BarcodeScanner from './pages/BarcodeScanner';
 
 const App: React.FC = () => {
@@ -96,7 +97,7 @@ const App: React.FC = () => {
       case 'set_salary': return <ComingSoon title="Lương" />;
 
       // Nhân sự
-      case 'hr_staff_list': return <ComingSoon title="DS nhân viên" />;
+      case 'hr_staff_list': return <StaffList />;
       case 'hr_salary_level': return <ComingSoon title="Cấp bậc lương" />;
       case 'hr_shifts': return <ComingSoon title="Ca làm việc" />;
       case 'hr_policy': return <ComingSoon title="Chế độ" />;
