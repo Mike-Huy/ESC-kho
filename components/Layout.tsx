@@ -50,8 +50,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
       `}>
         <div className="p-6 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-900/50">
-              <span className="material-icons-round">warehouse</span>
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden shadow-lg shadow-blue-900/10">
+              <img src="/logo-kho-hang-sg.jpg" alt="Logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <span className="font-extrabold text-lg tracking-tight text-white block leading-none">KHO SÀI GÒN</span>
