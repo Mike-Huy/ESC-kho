@@ -20,34 +20,74 @@ interface LayoutProps {
 
 const navItems: NavItem[] = [
   { 
-    id: 'wh_manage', label: 'Kho hàng', icon: 'storefront',
+    id: 'grp_inbound', label: '1. Đơn nhập', icon: 'login',
     children: [
-      { id: 'inventory', label: 'Quản lý kho', icon: 'inventory' },
-      { id: 'rackMap', label: 'Sơ đồ kệ', icon: 'location_on' },
-      { id: 'putAway', label: 'Nhập kho', icon: 'login' },
+      { id: 'inbound_new', label: 'Hàng mới', icon: 'add_shopping_cart' },
+      { id: 'inbound_return', label: 'Hàng trả', icon: 'settings_backup_restore' },
+      { id: 'inbound_internal', label: 'Xử lý nội bộ', icon: 'sync_alt' },
     ]
   },
   { 
-    id: 'orders_manage', label: 'Vận hành', icon: 'shopping_cart',
+    id: 'grp_proc', label: '2. Xử lý đơn', icon: 'process_chart',
     children: [
-      { id: 'orders', label: 'Đơn hàng', icon: 'receipt_long' },
-      { id: 'taskProgress', label: 'Vận chuyển', icon: 'local_shipping' },
+      { id: 'proc_list', label: 'Danh sách đơn', icon: 'list_alt' },
+      { id: 'proc_pick', label: 'Soạn đơn', icon: 'panning_alt' },
+      { id: 'proc_pack', label: 'Đóng gói', icon: 'inventory_2' },
+      { id: 'proc_route', label: 'Xếp tuyến', icon: 'fork_right' },
     ]
   },
   { 
-    id: 'finance_manage', label: 'Tài chính', icon: 'payments',
+    id: 'grp_outbound', label: '3. Đơn xuất', icon: 'logout',
     children: [
-      { id: 'costs', label: 'Thu chi', icon: 'monetization_on' },
+      { id: 'outbound_pending', label: 'Đơn chờ xuất', icon: 'pending_actions' },
+      { id: 'outbound_done', label: 'Đơn đã xuất', icon: 'task_alt' },
+      { id: 'outbound_cancel', label: 'Đơn hủy', icon: 'cancel' },
     ]
   },
   { 
-    id: 'hr_manage', label: 'Nhân sự', icon: 'people',
+    id: 'grp_warehouse', label: '4. Kho hàng', icon: 'warehouse',
     children: [
-      { id: 'staffAdmin', label: 'Nhân sự', icon: 'badge' },
-      { id: 'staffCheckIn', label: 'Chấm công', icon: 'fingerprint' },
+      { id: 'wh_map', label: 'Sơ đồ kho', icon: 'map' },
+      { id: 'wh_location', label: 'Vị trí kho', icon: 'location_on' },
+      { id: 'wh_stock', label: 'Tồn kho', icon: 'inventory' },
     ]
   },
-  { id: 'scanner', label: 'Quét mã', icon: 'qr_code_scanner' },
+  { 
+    id: 'grp_report', label: '5. Báo cáo', icon: 'analytics',
+    children: [
+      { id: 'rpt_inbound', label: 'Báo cáo nhập', icon: 'summarize' },
+      { id: 'rpt_proc', label: 'BC xử lý đơn', icon: 'fact_check' },
+      { id: 'rpt_outbound', label: 'BC xuất', icon: 'assignment' },
+      { id: 'rpt_inventory', label: 'Nhập-xuất-tồn', icon: 'account_balance_wallet' },
+    ]
+  },
+  { 
+    id: 'grp_operation', label: '6. Vận hành', icon: 'settings_suggest',
+    children: [
+      { id: 'op_split', label: 'Rã hàng chẵn', icon: 'call_split' },
+      { id: 'op_repack', label: 'Đóng gói lại', icon: 'package_2' },
+      { id: 'op_audit', label: 'Kiểm kê kho', icon: 'checklist' },
+      { id: 'op_replenish', label: 'Châm hàng', icon: 'rebase_edit' },
+      { id: 'op_transfer', label: 'Luân chuyển', icon: 'move_down' },
+    ]
+  },
+  { 
+    id: 'grp_finance', label: '7. Tài chính', icon: 'payments',
+    children: [
+      { id: 'fin_wh', label: 'Chi phí kho', icon: 'business' },
+      { id: 'fin_op', label: 'Chi phí vận hành', icon: 'engineering' },
+      { id: 'fin_hr', label: 'Chi phí nhân sự', icon: 'person_search' },
+      { id: 'fin_supplies', label: 'Vật tư tiêu hao', icon: 'auto_fix_normal' },
+      { id: 'fin_maint', label: 'Chi phí bảo trì', icon: 'build' },
+    ]
+  },
+  { 
+    id: 'grp_settings', label: '8. Cài đặt', icon: 'settings',
+    children: [
+      { id: 'set_staff', label: 'Nhân viên', icon: 'manage_accounts' },
+      { id: 'set_salary', label: 'Lương', icon: 'price_check' },
+    ]
+  }
 ];
 
 export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActivePage, user, onLogout }) => {
@@ -76,19 +116,20 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
     if (!user) return false;
     if (user.isSuperAdmin) return true;
     
-    // Manual mapping for demo/simplicity - can be expanded
+    // Mapping structure for permissions
     const moduleMapping: Record<string, string> = {
-      'dashboard': 'dashboard',
-      'inventory': 'inventory',
-      'costs': 'finance',
-      'orders': 'orders',
-      'taskProgress': 'shipping',
-      'staffAdmin': 'hr',
-      'staffCheckIn': 'attendance'
+      'grp_inbound': 'inbound',
+      'grp_proc': 'orders',
+      'grp_outbound': 'outbound',
+      'grp_warehouse': 'inventory',
+      'grp_report': 'reports',
+      'grp_operation': 'operation',
+      'grp_finance': 'finance',
+      'grp_settings': 'hr'
     };
     
-    const requiredModule = moduleMapping[item.id];
-    if (!requiredModule) return true; // Default visible if not explicitly mapped
+    const requiredModule = moduleMapping[item.id as string];
+    if (!requiredModule) return true;
     
     return user.allowedModules.includes(requiredModule);
   });

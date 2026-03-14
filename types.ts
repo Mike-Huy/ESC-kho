@@ -9,7 +9,23 @@ export type PageType =
   | 'staffAdmin'
   | 'scanner'
   | 'taskProgress'
-  | 'putAway';
+  | 'putAway'
+  // Đơn nhập
+  | 'inbound_new' | 'inbound_return' | 'inbound_internal'
+  // Xử lý đơn
+  | 'proc_list' | 'proc_pick' | 'proc_pack' | 'proc_route'
+  // Đơn xuất
+  | 'outbound_pending' | 'outbound_done' | 'outbound_cancel'
+  // Kho hàng
+  | 'wh_map' | 'wh_location' | 'wh_stock'
+  // Báo cáo
+  | 'rpt_inbound' | 'rpt_proc' | 'rpt_outbound' | 'rpt_inventory'
+  // Vận hành
+  | 'op_split' | 'op_repack' | 'op_audit' | 'op_replenish' | 'op_transfer'
+  // Tài chính
+  | 'fin_wh' | 'fin_op' | 'fin_hr' | 'fin_supplies' | 'fin_maint'
+  // Cài đặt
+  | 'set_staff' | 'set_salary';
 
 export interface NavItem {
   id: PageType | string;
