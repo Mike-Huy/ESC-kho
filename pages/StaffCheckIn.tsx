@@ -137,16 +137,21 @@ const StaffCheckIn: React.FC<StaffCheckInProps> = ({ onExit, user }) => {
 
         <header className="relative z-10 p-6 flex justify-between items-center border-b border-slate-100 bg-white">
           <div className="flex items-center gap-3 cursor-pointer" onClick={onExit}>
-             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-lg">
-                <span className="material-icons-round">warehouse</span>
+             <div className="w-10 h-10 rounded-xl overflow-hidden shadow-md">
+                <img src="/logo-kho-hang-sg.jpg" alt="Logo" className="w-full h-full object-cover" />
              </div>
              <div>
                 <h1 className="text-sm font-black uppercase text-primary tracking-tight">KHO SÀI GÒN</h1>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Hệ thống WMS</p>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">HỆ THỐNG WMS</p>
              </div>
           </div>
-          <div className="w-10 h-10 rounded-full border-2 border-slate-100 overflow-hidden shadow-sm">
-             <img className="w-full h-full object-cover" src={user.avatar || 'https://via.placeholder.com/100'} alt="Avatar" />
+          <div className="w-10 h-10 rounded-full border-2 border-slate-100 overflow-hidden shadow-sm bg-slate-50">
+             <img 
+               className="w-full h-full object-cover" 
+               src={user.avatar || 'https://lh3.googleusercontent.com/aida-public/AB6AXuDVzLvkJIdAaJAEd2-mZQ2Exovadg1pYx3BKGoMeVNkIUaI4hRmWdFDXX9VUlqPMwE9r-Xm4zpP9cAqP-wfts5jJOB5LPtA6l7d0W__i7xCJ2fJ40GhBnkiMg6LzBuBtruLnrV8xzyldIKZzpgkpjIAqP6PwlRyrMHKrbXKsXIb_31U66S9kGs-uHj6c8EEBXrNnnmkhICniJKNVAPl9oZIQqiNkera16ObwENxA1DXo1B1Gh1hPg3CwVUol05bFhuBjNmiBTjLK5WA'} 
+               alt="Avatar" 
+               onError={(e: any) => e.target.src = 'https://via.placeholder.com/100?text=User'}
+             />
           </div>
         </header>
 
@@ -250,7 +255,11 @@ const StaffCheckIn: React.FC<StaffCheckInProps> = ({ onExit, user }) => {
         </div>
 
         {/* Floating Bottom Nav for Staff */}
-        <nav className="absolute bottom-0 left-0 right-0 h-20 bg-white border-t border-slate-100 z-20 px-10 flex justify-between items-center shadow-[0_-10px_30px_rgba(0,0,0,0.03)]">
+        <nav className="absolute bottom-0 left-0 right-0 h-20 bg-white border-t border-slate-100 z-20 px-6 flex justify-between items-center shadow-[0_-10px_30px_rgba(0,0,0,0.03)]">
+           <button onClick={onExit} className="flex flex-col items-center text-slate-400 group hover:text-primary transition-colors">
+              <span className="material-icons-round text-2xl">home</span>
+              <span className="text-[9px] font-black uppercase mt-1 tracking-widest">Trang chủ</span>
+           </button>
            <button className="flex flex-col items-center text-primary group">
               <span className="material-icons-round text-2xl">fingerprint</span>
               <span className="text-[9px] font-black uppercase mt-1 tracking-widest">Chấm công</span>
