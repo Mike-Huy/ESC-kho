@@ -45,7 +45,7 @@ const App: React.FC = () => {
       case 'orders': return <OrderList onViewDetail={() => setActivePage('orderDetail')} />;
       case 'orderDetail': return <OrderDetail onBack={() => setActivePage('orders')} />;
       case 'taskProgress': return <TaskProgress />;
-      case 'staffCheckIn': return <StaffCheckIn onExit={() => setActivePage('dashboard')} />;
+      case 'staffCheckIn': return <StaffCheckIn onExit={() => setActivePage('dashboard')} user={user} />;
       case 'staffAdmin': return <StaffAdmin />;
       case 'scanner': return <BarcodeScanner />;
       
@@ -66,6 +66,7 @@ const App: React.FC = () => {
       case 'outbound_cancel': return <ComingSoon title="Đơn hủy" />;
       
       // Kho hàng
+      case 'wh_list': return <ComingSoon title="Danh sách kho" />;
       case 'wh_map': return <ComingSoon title="Sơ đồ kho" />;
       case 'wh_location': return <ComingSoon title="Vị trí kho" />;
       case 'wh_stock': return <ComingSoon title="Tồn kho" />;
@@ -93,6 +94,12 @@ const App: React.FC = () => {
       // Cài đặt
       case 'set_staff': return <ComingSoon title="Nhân viên" />;
       case 'set_salary': return <ComingSoon title="Lương" />;
+
+      // Nhân sự
+      case 'hr_staff_list': return <ComingSoon title="DS nhân viên" />;
+      case 'hr_salary_level': return <ComingSoon title="Cấp bậc lương" />;
+      case 'hr_shifts': return <ComingSoon title="Ca làm việc" />;
+      case 'hr_policy': return <ComingSoon title="Chế độ" />;
 
       default: return <Dashboard />;
     }

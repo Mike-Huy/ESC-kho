@@ -28,9 +28,9 @@ const navItems: NavItem[] = [
     ]
   },
   { 
-    id: 'grp_proc', label: '2. Xử lý đơn', icon: 'process_chart',
+    id: 'grp_proc', label: '2. Xử lý đơn', icon: 'fact_check',
     children: [
-      { id: 'proc_list', label: 'Danh sách đơn', icon: 'list_alt' },
+      { id: 'orders', label: 'Danh sách đơn', icon: 'list_alt' },
       { id: 'proc_pick', label: 'Soạn đơn', icon: 'panning_alt' },
       { id: 'proc_pack', label: 'Đóng gói', icon: 'inventory_2' },
       { id: 'proc_route', label: 'Xếp tuyến', icon: 'fork_right' },
@@ -47,9 +47,10 @@ const navItems: NavItem[] = [
   { 
     id: 'grp_warehouse', label: '4. Kho hàng', icon: 'warehouse',
     children: [
-      { id: 'wh_map', label: 'Sơ đồ kho', icon: 'map' },
+      { id: 'wh_list', label: 'Danh sách kho', icon: 'list' },
+      { id: 'rackMap', label: 'Sơ đồ kho', icon: 'map' },
       { id: 'wh_location', label: 'Vị trí kho', icon: 'location_on' },
-      { id: 'wh_stock', label: 'Tồn kho', icon: 'inventory' },
+      { id: 'inventory', label: 'Tồn kho', icon: 'inventory' },
     ]
   },
   { 
@@ -72,7 +73,17 @@ const navItems: NavItem[] = [
     ]
   },
   { 
-    id: 'grp_finance', label: '7. Tài chính', icon: 'payments',
+    id: 'grp_hr', label: '7. Nhân sự', icon: 'badge',
+    children: [
+      { id: 'hr_staff_list', label: 'DS nhân viên', icon: 'people' },
+      { id: 'hr_salary_level', label: 'Cấp bậc lương', icon: 'grade' },
+      { id: 'hr_shifts', label: 'Ca làm việc', icon: 'history_toggle_off' },
+      { id: 'staffCheckIn', label: 'Chấm công', icon: 'fingerprint' },
+      { id: 'hr_policy', label: 'Chế độ', icon: 'description' },
+    ]
+  },
+  { 
+    id: 'grp_finance', label: '8. Tài chính', icon: 'payments',
     children: [
       { id: 'fin_wh', label: 'Chi phí kho', icon: 'business' },
       { id: 'fin_op', label: 'Chi phí vận hành', icon: 'engineering' },
@@ -82,9 +93,9 @@ const navItems: NavItem[] = [
     ]
   },
   { 
-    id: 'grp_settings', label: '8. Cài đặt', icon: 'settings',
+    id: 'grp_settings', label: '9. Cài đặt', icon: 'settings',
     children: [
-      { id: 'set_staff', label: 'Nhân viên', icon: 'manage_accounts' },
+      { id: 'staffAdmin', label: 'Nhân viên', icon: 'manage_accounts' },
       { id: 'set_salary', label: 'Lương', icon: 'price_check' },
     ]
   }
@@ -124,6 +135,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
       'grp_warehouse': 'inventory',
       'grp_report': 'reports',
       'grp_operation': 'operation',
+      'grp_hr': 'hr',
       'grp_finance': 'finance',
       'grp_settings': 'hr'
     };
@@ -189,7 +201,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
                       handlePageChange(item.id as PageType);
                     }
                   }}
-                  className={`flex items-center justify-between gap-3 px-3 py-2.5 w-full rounded-lg transition-all duration-200 group ${
+                  className={`flex items-center justify-between gap-3 px-3 py-1.5 w-full rounded-lg transition-all duration-200 group ${
                     activePage === item.id || (hasChildren && item.children?.some(c => c.id === activePage))
                       ? 'bg-primary/10 text-primary'
                       : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -213,13 +225,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
                 </button>
 
                 {hasChildren && (
-                  <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[400px] opacity-100 mb-2' : 'max-h-0 opacity-0'}`}>
-                    <div className="ml-5 pl-4 border-l border-slate-800 space-y-0.5 mt-1">
+                  <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                    <div className="ml-5 pl-4 border-l border-slate-800 space-y-0.5">
                       {item.children?.map(child => (
                         <button
                           key={child.id}
                           onClick={() => handlePageChange(child.id as PageType)}
-                          className={`flex items-center gap-3 px-3 py-2 w-full rounded-md text-[13px] font-semibold transition-all ${
+                          className={`flex items-center gap-3 px-3 py-1 w-full rounded-md text-[13px] font-semibold transition-all ${
                             activePage === child.id 
                               ? 'text-white' 
                               : 'text-slate-500 hover:text-slate-300'
@@ -236,11 +248,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
             );
           })}
           
-          <div className="pt-4 pb-2 px-3 text-[10px] font-bold text-slate-700 uppercase tracking-widest mt-4">Hệ thống</div>
-          <button className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-colors text-sm font-bold">
-            <span className="material-icons-round text-[20px]">settings</span>
-            <span>Cài đặt</span>
-          </button>
         </nav>
 
       </aside>
@@ -324,6 +331,33 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
              </div>
           </div>
         </header>
+        
+        {/* Floating Action Buttons Area - Right Fixed */}
+        <div className="fixed right-6 top-1/2 -translate-y-1/2 z-[60] flex flex-col gap-4">
+          <button 
+            onClick={() => setActivePage('scanner')}
+            className="group flex items-center justify-end gap-3 transition-all"
+          >
+            <span className="bg-white px-3 py-1.5 rounded-lg shadow-xl text-xs font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity border border-slate-100">
+              Quét mã vạch
+            </span>
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl transition-all active:scale-90 ${activePage === 'scanner' ? 'bg-primary text-white scale-110 shadow-primary/30' : 'bg-white text-slate-600 hover:text-primary'}`}>
+              <span className="material-icons-round text-3xl">qr_code_scanner</span>
+            </div>
+          </button>
+
+          <button 
+            onClick={() => setActivePage('staffCheckIn')}
+            className="group flex items-center justify-end gap-3 transition-all"
+          >
+            <span className="bg-white px-3 py-1.5 rounded-lg shadow-xl text-xs font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity border border-slate-100">
+              Chấm công
+            </span>
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl transition-all active:scale-90 ${activePage === 'staffCheckIn' ? 'bg-primary text-white scale-110 shadow-primary/30' : 'bg-white text-slate-600 hover:text-emerald-500'}`}>
+              <span className="material-icons-round text-3xl">fingerprint</span>
+            </div>
+          </button>
+        </div>
 
         {/* Page Content */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto custom-scrollbar relative">

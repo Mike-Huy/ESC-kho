@@ -17,7 +17,7 @@ export type PageType =
   // Đơn xuất
   | 'outbound_pending' | 'outbound_done' | 'outbound_cancel'
   // Kho hàng
-  | 'wh_map' | 'wh_location' | 'wh_stock'
+  | 'wh_list' | 'wh_map' | 'wh_location' | 'wh_stock'
   // Báo cáo
   | 'rpt_inbound' | 'rpt_proc' | 'rpt_outbound' | 'rpt_inventory'
   // Vận hành
@@ -25,7 +25,9 @@ export type PageType =
   // Tài chính
   | 'fin_wh' | 'fin_op' | 'fin_hr' | 'fin_supplies' | 'fin_maint'
   // Cài đặt
-  | 'set_staff' | 'set_salary';
+  | 'set_staff' | 'set_salary'
+  // Nhân sự
+  | 'hr_staff_list' | 'hr_salary_level' | 'hr_shifts' | 'hr_policy';
 
 export interface NavItem {
   id: PageType | string;
@@ -48,7 +50,7 @@ export interface Order {
   id: string;
   customer: string;
   email: string;
-  status: 'new' | 'processing' | 'shipped' | 'cancelled';
+  status: 'new' | 'processing' | 'shipped' | 'cancelled' | 'pending';
   date: string;
   total: string;
 }

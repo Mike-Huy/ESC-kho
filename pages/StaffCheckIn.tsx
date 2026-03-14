@@ -1,141 +1,273 @@
 import React, { useEffect, useState } from 'react';
+import { supabase } from '../supabaseClient';
 
-const StaffCheckIn: React.FC<{onExit: () => void}> = ({onExit}) => {
+interface StaffCheckInProps {
+  onExit: () => void;
+  user: any;
+}
+
+const StaffCheckIn: React.FC<StaffCheckInProps> = ({ onExit, user }) => {
   const [time, setTime] = useState(new Date());
-  const [checkInTime] = useState(new Date(new Date().setHours(8, 0, 0))); // Giả lập 8h sáng hôm nay
-  const [elapsed, setElapsed] = useState('');
+  const [currentAttendance, setCurrentAttendance] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [history, setHistory] = useState<any[]>([]);
+  const [elapsed, setElapsed] = useState('00:00:00');
 
-  // Live Clock effect
+  // Fetch today's attendance and history
+  const fetchData = async () => {
+    if (!user) return;
+    try {
+      setLoading(true);
+      const today = new Date().toISOString().split('T')[0];
+
+      // 1. Get today's record
+      const { data: todayData, error: todayError } = await supabase
+        .from('hr_attendance')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('work_date', today)
+        .maybeSingle();
+
+      if (todayError) throw todayError;
+      setCurrentAttendance(todayData);
+
+      // 2. Get recent history (past 7 days)
+      const { data: historyData, error: historyError } = await supabase
+        .from('hr_attendance')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('work_date', { ascending: false })
+        .limit(7);
+
+      if (historyError) throw historyError;
+      setHistory(historyData || []);
+
+    } catch (err) {
+      console.error('Error fetching attendance:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [user]);
+
+  // Live Clock and Elapsed Time logic
   useEffect(() => {
     const timer = setInterval(() => {
-        const now = new Date();
-        setTime(now);
-        
-        // Calculate elapsed time since 8:00 AM
+      const now = new Date();
+      setTime(now);
+
+      if (currentAttendance?.check_in && !currentAttendance?.check_out) {
+        const checkInTime = new Date(currentAttendance.check_in);
         const diff = now.getTime() - checkInTime.getTime();
         if (diff > 0) {
-            const hours = Math.floor(diff / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-            setElapsed(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+          const hours = Math.floor(diff / (1000 * 60 * 60));
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+          setElapsed(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
         }
+      } else {
+        setElapsed('00:00:00');
+      }
     }, 1000);
     return () => clearInterval(timer);
-  }, [checkInTime]);
+  }, [currentAttendance]);
+
+  const handleAction = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const now = new Date().toISOString();
+      const today = new Date().toISOString().split('T')[0];
+
+      if (!currentAttendance) {
+        // Perform Check-in
+        const { error } = await supabase
+          .from('hr_attendance')
+          .insert({
+            user_id: user.id,
+            work_date: today,
+            check_in: now,
+            status: 'present'
+          });
+        if (error) throw error;
+      } else if (!currentAttendance.check_out) {
+        // Perform Check-out
+        const { error } = await supabase
+          .from('hr_attendance')
+          .update({ check_out: now })
+          .eq('id', currentAttendance.id);
+        if (error) throw error;
+      }
+      
+      await fetchData();
+    } catch (err) {
+      console.error('Action error:', err);
+      alert('Đã xảy ra lỗi khi thực hiện thao tác.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatDate = (date: Date) => {
-      const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
-      const d = date.getDate();
-      const m = date.getMonth() + 1;
-      return `${days[date.getDay()]}, ${d} Tháng ${m}`;
+    const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+    return `${days[date.getDay()]}, ${date.getDate()} Tháng ${date.getMonth() + 1}`;
   };
+
+  const formatShortDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    return {
+      dayName: dayNames[d.getDay()],
+      dayNum: d.getDate()
+    };
+  };
+
+  if (!user) return null;
 
   return (
     <div className="bg-slate-200 text-slate-900 min-h-screen flex justify-center items-center font-sans">
-      <main className="w-full max-w-[480px] h-screen bg-background-light relative flex flex-col shadow-2xl overflow-hidden">
-        {/* Background Image */}
-        <div className="absolute inset-0 z-0 pointer-events-none">
-          <img className="w-full h-full object-cover brightness-110 contrast-[0.85] opacity-40" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQ0DLcDOQZnvJ7R-n2T4CcAvnpeecGCJ7UdMBal46vdyZ8JdBHSP4Uh1bTTFowgeJLPofaIFUeDnZPMI0EWAehJLGPwAjWwjvtEiBB5y_L4RIIM74com26ZrZptVU-0Ucg6IbMxS2rKOE_ZCZJXQHkol04CWQFF7gNGgTUyybG1JKyry94UN4k5a7taA3XAR47Mp7MwyXgsOHegIfSukm-pvmZ8G-zBvSONlueWedmlKouvfnkAlPFIvVg6de_9EleJsHXQlUFWmal" alt="Background" />
-          <div className="absolute inset-0 bg-gradient-to-b from-white/90 via-white/40 to-background-light"></div>
+      <main className="w-full max-w-[480px] h-screen bg-white relative flex flex-col shadow-2xl overflow-hidden">
+        {/* Background Overlay */}
+        <div className="absolute inset-0 z-0 pointer-events-none opacity-5">
+           <div className="w-full h-full" style={{backgroundImage: 'radial-gradient(#1d6ac9 1px, transparent 1px)', backgroundSize: '24px 24px'}}></div>
         </div>
 
-        <header className="relative z-10 p-6 flex justify-between items-center">
-          <div 
-             className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity active:scale-95 select-none" 
-             onClick={onExit}
-             role="button"
-             tabIndex={0}
-             title="Quay về trang chủ"
-          >
-             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/20">
+        <header className="relative z-10 p-6 flex justify-between items-center border-b border-slate-100 bg-white">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={onExit}>
+             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-lg">
                 <span className="material-icons-round">warehouse</span>
              </div>
              <div>
-                <h1 className="text-sm font-bold uppercase tracking-wider text-primary">Kho Hàng Sài Gòn</h1>
-                <p className="text-[10px] text-slate-500 font-bold">Quay về Dashboard quản lý</p>
+                <h1 className="text-sm font-black uppercase text-primary tracking-tight">KHO SÀI GÒN</h1>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Hệ thống WMS</p>
              </div>
           </div>
-          <button onClick={onExit} className="w-10 h-10 rounded-full border-2 border-white shadow-md overflow-hidden hover:ring-2 hover:ring-primary/50 transition-all">
-             <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCD0YVBslEb3iO8RcKJ7oHEJBePXxkX33aCuA1THi1FPyaYpdeDVnn66vSEn7I99qTu0pVn9V7CefAyqG2KUjB-o7mTs-om4EdNhiYTFTiUbX-9kTtrtRETCZm032AE_Kzc4omY8sz6jwOxAygxAnVuJhxOj2VaLxLpeqTineq8QSgzXGoUc60rLBpU7yUzrI2GK9ICbOL2lyzvymkJQn46VfER-dRpIc-Tf-84p14pMG9DzpybJIWJlItN-j1Ndc26FjubsJFWQUKU" alt="User Avatar" />
-          </button>
+          <div className="w-10 h-10 rounded-full border-2 border-slate-100 overflow-hidden shadow-sm">
+             <img className="w-full h-full object-cover" src={user.avatar || 'https://via.placeholder.com/100'} alt="Avatar" />
+          </div>
         </header>
 
-        <div className="relative z-10 flex-1 overflow-y-auto px-6 pb-32 custom-scrollbar">
-           <section className="mt-4 mb-8">
-              <h2 className="text-2xl font-extrabold text-slate-800">Xin chào, Nguyễn Văn A</h2>
-              <div className="flex items-center gap-2 mt-1">
-                 <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                 <p className="text-slate-600 text-sm font-semibold">Đang trong ca làm việc</p>
+        <div className="relative z-10 flex-1 overflow-y-auto px-6 pb-24 custom-scrollbar">
+           <section className="mt-8 mb-8">
+              <span className="text-xs font-bold text-primary uppercase tracking-[0.2em] mb-2 block">Cổng nhân viên</span>
+              <h2 className="text-3xl font-black text-slate-900 leading-none">Xin chào,<br/>{user.full_name}</h2>
+              <div className="flex items-center gap-2 mt-3">
+                 <span className={`inline-block w-2.5 h-2.5 rounded-full ${currentAttendance?.check_in && !currentAttendance?.check_out ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></span>
+                 <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">
+                   {currentAttendance?.check_in && !currentAttendance?.check_out ? 'Đang trong ca làm việc' : 'Ngoài giờ làm việc'}
+                 </p>
               </div>
            </section>
            
-           <section className="bg-white shadow-lg shadow-slate-200/50 rounded-2xl p-6 mb-8 text-center border border-slate-100 transition-all hover:shadow-xl">
-              <div className="mb-6">
-                 <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Thời gian hiện tại</p>
-                 <div className="text-4xl font-extrabold tracking-tight text-slate-800 tabular-nums">
-                     {time.toLocaleTimeString('vi-VN')}
+           <section className="bg-white shadow-2xl shadow-slate-200 rounded-[2.5rem] p-8 mb-8 text-center border border-slate-100 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150 duration-700"></div>
+              
+              <div className="mb-8 relative z-10">
+                 <p className="text-slate-400 text-[11px] font-bold uppercase tracking-[0.2em] mb-4">Thời gian hiện tại</p>
+                 <div className="text-5xl font-black tracking-tighter text-slate-900 tabular-nums mb-2">
+                     {time.toLocaleTimeString('vi-VN', { hour12: false })}
                  </div>
-                 <p className="text-primary font-bold mt-1">{formatDate(time)}</p>
+                 <p className="text-primary font-black text-xs uppercase tracking-widest">{formatDate(time)}</p>
               </div>
-              <div className="bg-slate-50 rounded-xl py-4 mb-6 border border-slate-100">
-                 <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Thời gian đã làm</p>
-                 <div className="text-3xl font-bold text-slate-800 tabular-nums">{elapsed || '00:00:00'}</div>
+
+              <div className="bg-slate-50 rounded-3xl py-6 mb-8 border border-slate-100 relative z-10">
+                 <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-2">Thời gian làm việc hôm nay</p>
+                 <div className="text-4xl font-black text-slate-800 tabular-nums tracking-tight">{elapsed}</div>
               </div>
-              <button className="w-full py-5 bg-red-500 hover:bg-red-600 active:scale-95 transition-all rounded-xl flex items-center justify-center gap-3 shadow-lg shadow-red-500/30 text-white group">
-                 <span className="material-icons-round text-2xl group-hover:rotate-180 transition-transform">logout</span>
-                 <span className="text-lg font-bold tracking-wide">KẾT THÚC CA LÀM</span>
+
+              <button 
+                onClick={handleAction}
+                disabled={loading || (currentAttendance?.check_in && currentAttendance?.check_out)}
+                className={`w-full py-6 rounded-[2rem] flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95 text-white font-black tracking-widest relative z-10 
+                  ${!currentAttendance 
+                    ? 'bg-emerald-600 shadow-emerald-200 hover:bg-emerald-700' 
+                    : !currentAttendance.check_out 
+                      ? 'bg-rose-600 shadow-rose-200 hover:bg-rose-700'
+                      : 'bg-slate-300 cursor-not-allowed'}`}
+              >
+                 <span className="material-icons-round text-2xl">
+                   {!currentAttendance ? 'login' : !currentAttendance.check_out ? 'logout' : 'check_circle'}
+                 </span>
+                 <span className="text-lg uppercase">
+                    {!currentAttendance ? 'Bắt đầu ca làm' : !currentAttendance.check_out ? 'Kết thúc ca làm' : 'Đã hoàn thành'}
+                 </span>
               </button>
            </section>
 
            <section className="grid grid-cols-2 gap-4 mb-8">
-              <div className="bg-white shadow-sm rounded-xl p-4">
-                 <p className="text-slate-400 text-[10px] font-bold uppercase mb-1">Check-in</p>
-                 <p className="text-lg font-bold text-slate-800">08:00 AM</p>
+              <div className="bg-white shadow-sm rounded-3xl p-5 border border-slate-100">
+                 <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2"> Giờ vào</p>
+                 <p className="text-xl font-black text-slate-900">
+                   {currentAttendance?.check_in ? new Date(currentAttendance.check_in).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                 </p>
               </div>
-              <div className="bg-white shadow-sm rounded-xl p-4 border-l-4 border-primary">
-                 <p className="text-slate-400 text-[10px] font-bold uppercase mb-1">Dự kiến nghỉ</p>
-                 <p className="text-lg font-bold text-slate-800">05:00 PM</p>
+              <div className="bg-white shadow-sm rounded-3xl p-5 border border-slate-100 border-l-4 border-primary">
+                 <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Giờ ra</p>
+                 <p className="text-xl font-black text-slate-900">
+                   {currentAttendance?.check_out ? new Date(currentAttendance.check_out).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                 </p>
               </div>
            </section>
 
-           <section>
-              <h3 className="text-lg font-bold text-slate-800 mb-4">Lịch sử tuần này</h3>
-              <div className="space-y-3">
-                 {[
-                   { day: 'TH2', date: '23', time: '08:05 - 17:15', note: '8.5 giờ', status: 'Hợp lệ', color: 'emerald' },
-                   { day: 'CN', date: '22', time: '08:00 - 12:00', note: 'Tăng ca', status: 'Xác nhận', color: 'primary' },
-                   { day: 'TH7', date: '21', time: '07:55 - 17:00', note: '8.0 giờ', status: 'Hợp lệ', color: 'emerald' }
-                 ].map((item, idx) => (
-                   <div key={idx} className="bg-white/80 rounded-xl p-4 flex items-center justify-between border border-slate-50 shadow-sm hover:bg-white transition-colors">
-                      <div className="flex items-center gap-4">
-                         <div className="w-10 h-10 rounded-lg bg-slate-100 flex flex-col items-center justify-center">
-                            <span className="text-[10px] font-bold text-slate-400 leading-none">{item.day}</span>
-                            <span className="text-sm font-extrabold text-slate-700 leading-none mt-1">{item.date}</span>
-                         </div>
-                         <div>
-                            <p className="text-sm font-bold text-slate-800">{item.time}</p>
-                            <p className="text-[11px] text-slate-500 font-medium">{item.note}</p>
-                         </div>
-                      </div>
-                      <div className={`text-${item.color === 'primary' ? 'blue' : 'emerald'}-600 text-xs font-bold bg-${item.color === 'primary' ? 'blue' : 'emerald'}-50 px-3 py-1.5 rounded-full`}>{item.status}</div>
+           <section className="mb-8">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Lịch sử chấm công</h3>
+                <span className="text-[10px] font-bold text-primary bg-primary/10 px-3 py-1 rounded-full uppercase">7 ngày gần nhất</span>
+              </div>
+              <div className="space-y-4">
+                 {history.length > 0 ? history.map((item, idx) => {
+                   const { dayName, dayNum } = formatShortDate(item.work_date);
+                   const isDone = item.check_in && item.check_out;
+                   return (
+                    <div key={idx} className="bg-slate-50/50 rounded-3xl p-4 flex items-center justify-between border border-slate-100 hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all group">
+                       <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 rounded-2xl bg-white shadow-sm flex flex-col items-center justify-center border border-slate-100 group-hover:border-primary transition-colors">
+                             <span className="text-[10px] font-black text-slate-400 uppercase leading-none">{dayName}</span>
+                             <span className="text-xl font-black text-slate-800 leading-none mt-1.5">{dayNum}</span>
+                          </div>
+                          <div>
+                             <p className="text-sm font-black text-slate-800">
+                               {item.check_in ? new Date(item.check_in).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''} 
+                               {item.check_out ? ` - ${new Date(item.check_out).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}` : ' (Đang làm)'}
+                             </p>
+                             <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mt-1">{item.status === 'present' ? 'Có mặt' : item.status}</p>
+                          </div>
+                       </div>
+                       <div className={`w-3 h-3 rounded-full ${isDone ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`}></div>
+                    </div>
+                   );
+                 }) : (
+                   <div className="text-center py-10 text-slate-300">
+                      <span className="material-icons-round text-4xl mb-2">history_toggle_off</span>
+                      <p className="text-xs font-bold uppercase">Chưa có lịch sử</p>
                    </div>
-                 ))}
+                 )}
               </div>
            </section>
         </div>
 
-        <nav className="absolute bottom-0 left-0 right-0 h-20 bg-slate-100 border-t border-slate-200 z-20 px-8 flex justify-between items-center">
-           <button className="flex flex-col items-center text-primary group"><span className="material-icons-round group-hover:-translate-y-1 transition-transform">fingerprint</span><span className="text-[10px] font-bold mt-1">Chấm công</span></button>
-           <button className="flex flex-col items-center text-slate-400 group hover:text-primary transition-colors"><span className="material-icons-round group-hover:-translate-y-1 transition-transform">receipt_long</span><span className="text-[10px] font-bold mt-1">Lương</span></button>
-           <button className="flex flex-col items-center text-slate-400 group hover:text-primary transition-colors"><span className="material-icons-round group-hover:-translate-y-1 transition-transform">event_note</span><span className="text-[10px] font-bold mt-1">Nghỉ phép</span></button>
-           <button className="flex flex-col items-center text-slate-400 group hover:text-primary transition-colors"><span className="material-icons-round group-hover:-translate-y-1 transition-transform">person_outline</span><span className="text-[10px] font-bold mt-1">Cá nhân</span></button>
-        </nav>
-        
-        <div className="absolute bottom-24 right-6 z-30">
-           <button className="w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-xl shadow-primary/40 active:scale-90 transition-transform text-white hover:bg-blue-700">
-              <span className="material-icons-round text-3xl">qr_code_scanner</span>
+        {/* Floating Bottom Nav for Staff */}
+        <nav className="absolute bottom-0 left-0 right-0 h-20 bg-white border-t border-slate-100 z-20 px-10 flex justify-between items-center shadow-[0_-10px_30px_rgba(0,0,0,0.03)]">
+           <button className="flex flex-col items-center text-primary group">
+              <span className="material-icons-round text-2xl">fingerprint</span>
+              <span className="text-[9px] font-black uppercase mt-1 tracking-widest">Chấm công</span>
            </button>
-        </div>
+           <button className="flex flex-col items-center text-slate-300 group hover:text-primary transition-colors">
+              <span className="material-icons-round text-2xl">receipt_long</span>
+              <span className="text-[9px] font-black uppercase mt-1 tracking-widest">Lương</span>
+           </button>
+           <button className="flex flex-col items-center text-slate-300 group hover:text-primary transition-colors">
+              <span className="material-icons-round text-2xl">event_note</span>
+              <span className="text-[9px] font-black uppercase mt-1 tracking-widest">Nghỉ phép</span>
+           </button>
+           <button className="flex flex-col items-center text-slate-300 group hover:text-primary transition-colors">
+              <span className="material-icons-round text-2xl">person_outline</span>
+              <span className="text-[9px] font-black uppercase mt-1 tracking-widest">Cá nhân</span>
+           </button>
+        </nav>
       </main>
     </div>
   );
