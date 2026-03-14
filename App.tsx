@@ -14,6 +14,7 @@ import TaskProgress from './pages/TaskProgress';
 import StaffCheckIn from './pages/StaffCheckIn';
 import StaffAdmin from './pages/StaffAdmin';
 import StaffList from './pages/StaffList';
+import RoleManagement from './pages/RoleManagement';
 import BarcodeScanner from './pages/BarcodeScanner';
 
 const App: React.FC = () => {
@@ -94,6 +95,7 @@ const App: React.FC = () => {
       
       // Cài đặt
       case 'set_staff': return <ComingSoon title="Nhân viên" />;
+      case 'set_permissions': return <RoleManagement />;
       case 'set_salary': return <ComingSoon title="Lương" />;
 
       // Nhân sự

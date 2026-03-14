@@ -96,6 +96,7 @@ const navItems: NavItem[] = [
     id: 'grp_settings', label: '9. Cài đặt', icon: 'settings',
     children: [
       { id: 'staffAdmin', label: 'Nhân viên', icon: 'manage_accounts' },
+      { id: 'set_permissions', label: 'Phân quyền', icon: 'security' },
       { id: 'set_salary', label: 'Lương', icon: 'price_check' },
     ]
   }
