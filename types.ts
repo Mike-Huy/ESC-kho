@@ -26,6 +26,8 @@ export type PageType =
   | 'fin_wh' | 'fin_op' | 'fin_hr' | 'fin_supplies' | 'fin_maint'
   // Cài đặt
   | 'set_staff' | 'set_salary' | 'set_permissions'
+  // Sản phẩm
+  | 'product_list'
   // Nhân sự
   | 'hr_staff_list' | 'hr_staff_profile' | 'hr_salary_level' | 'hr_shifts' | 'hr_policy';
 

@@ -3,7 +3,7 @@ import { Order } from '../types';
 import { supabase } from '../supabaseClient';
 
 interface OrderListProps {
-  onViewDetail: () => void;
+  onViewDetail: (id: string) => void;
 }
 
 // Dữ liệu mẫu Fallback
@@ -190,7 +190,7 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail }) => {
                   </td>
                   <td className="px-8 py-6">
                     <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
-                       <button onClick={onViewDetail} className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm"><span className="material-icons-round text-xl">visibility</span></button>
+                       <button onClick={() => onViewDetail(order.id)} className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm"><span className="material-icons-round text-xl">visibility</span></button>
                        <button className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm"><span className="material-icons-round text-xl">edit</span></button>
                     </div>
                   </td>

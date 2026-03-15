@@ -6,6 +6,7 @@ Tệp này chứa các quy định bắt buộc mà AI Assistant (Antigravity) p
 - **Localhost Port**: Luôn sử dụng port `3001` cho môi trường phát triển (đã cấu hình trong `vite.config.ts`).
 - **Supabase**: Kết nối với dự án `zrjwslcxbfefzjlgctci.supabase.co`. Mọi thay đổi về database phải đồng bộ với schema của dự án này.
 - **Vercel**: Khi deploy, phải đảm bảo các biến môi trường (Environment Variables) như `GEMINI_API_KEY` được thiết lập.
+- **Ngôn ngữ**: Khi trao đổi trong Anti Gravity, lúc bạn xử lý, suy luận, .... thì có thể dùng tiếng Anh, nhưng khi thông báo kết quả thực hiện thì phải dùng tiếng Việt
 
 ## 2. Giao diện & Trải nghiệm người dùng (UI/UX)
 - **Logo**: Luôn sử dụng file `/logo-kho-hang-sg.jpg` làm logo chính thức và icon trình duyệt.

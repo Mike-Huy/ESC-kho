@@ -17,10 +17,13 @@ import StaffList from './pages/StaffList';
 import StaffProfile from './pages/StaffProfile';
 import RoleManagement from './pages/RoleManagement';
 import BarcodeScanner from './pages/BarcodeScanner';
+import ProductList from './pages/ProductList';
+import InboundNew from './pages/InboundNew';
 
 const App: React.FC = () => {
   const [activePage, setActivePage] = useState<PageType>('dashboard');
   const [selectedStaffId, setSelectedStaffId] = useState<number | null>(null);
+  const [selectedOrderCode, setSelectedOrderCode] = useState<string | null>(null);
   const [user, setUser] = useState<UserData | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -46,15 +49,15 @@ const App: React.FC = () => {
       case 'costs': return <CostAnalysis />;
       case 'rackMap': return <RackMap />;
       case 'putAway': return <PutAway />;
-      case 'orders': return <OrderList onViewDetail={() => setActivePage('orderDetail')} />;
-      case 'orderDetail': return <OrderDetail onBack={() => setActivePage('orders')} />;
+      case 'orders': return <OrderList onViewDetail={(id) => { setSelectedOrderCode(id); setActivePage('orderDetail'); }} />;
+      case 'orderDetail': return <OrderDetail orderCode={selectedOrderCode} onBack={() => setActivePage('orders')} />;
       case 'taskProgress': return <TaskProgress />;
       case 'staffCheckIn': return <StaffCheckIn onExit={() => setActivePage('dashboard')} user={user} />;
       case 'staffAdmin': return <StaffAdmin />;
       case 'scanner': return <BarcodeScanner />;
       
       // Đơn nhập
-      case 'inbound_new': return <ComingSoon title="Hàng mới" />;
+      case 'inbound_new': return <InboundNew />;
       case 'inbound_return': return <ComingSoon title="Hàng trả" />;
       case 'inbound_internal': return <ComingSoon title="Xử lý nội bộ" />;
       
@@ -70,6 +73,7 @@ const App: React.FC = () => {
       case 'outbound_cancel': return <ComingSoon title="Đơn hủy" />;
       
       // Kho hàng
+      case 'product_list': return <ProductList />;
       case 'wh_list': return <ComingSoon title="Danh sách kho" />;
       case 'wh_map': return <ComingSoon title="Sơ đồ kho" />;
       case 'wh_location': return <ComingSoon title="Vị trí kho" />;

@@ -47,6 +47,7 @@ const navItems: NavItem[] = [
   { 
     id: 'grp_warehouse', label: '4. Kho hàng', icon: 'warehouse',
     children: [
+      { id: 'product_list', label: 'Danh mục SP', icon: 'inventory_2' },
       { id: 'wh_list', label: 'Danh sách kho', icon: 'list' },
       { id: 'rackMap', label: 'Sơ đồ kho', icon: 'map' },
       { id: 'wh_location', label: 'Vị trí kho', icon: 'location_on' },

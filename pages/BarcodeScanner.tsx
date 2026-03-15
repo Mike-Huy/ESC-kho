@@ -15,11 +15,28 @@ const BarcodeScanner: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      // 1. Tìm sản phẩm theo product_code hoặc barcode
+      // 1. Kiểm tra xem mã quét có phải là định dạng PRODUCT_CODE-SERIAL_NUMBER không
+      let effectiveProductCode = sku.trim();
+      let detectedSerial = null;
+
+      if (effectiveProductCode.includes('-')) {
+        const { data: snData, error: snError } = await supabase
+          .from('serial_tracking')
+          .select('product_code, serial_number')
+          .eq('product_code_and_sn', effectiveProductCode)
+          .single();
+        
+        if (!snError && snData) {
+          effectiveProductCode = snData.product_code;
+          detectedSerial = snData.serial_number;
+        }
+      }
+
+      // 2. Tìm sản phẩm theo product_code hoặc barcode
       const { data: productData, error: pError } = await supabase
         .from('product')
         .select('*')
-        .or(`product_code.eq."${sku.trim()}",barcode.eq."${sku.trim()}"`)
+        .or(`product_code.eq."${effectiveProductCode}",barcode.eq."${effectiveProductCode}"`)
         .single();
 
       if (pError) {

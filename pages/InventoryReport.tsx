@@ -58,6 +58,10 @@ const InventoryReport: React.FC = () => {
   
   // State quản lý bộ lọc ngày - Mặc định theo yêu cầu của bạn
   const [dateRange, setDateRange] = useState("Dữ liệu hiện tại (Thời gian thực)");
+  const [showSN, setShowSN] = useState<string | null>(null);
+  const [showPrintLabel, setShowPrintLabel] = useState<any | null>(null);
+  const [serialNumbers, setSerialNumbers] = useState<any[]>([]);
+  const [snLoading, setSNLoading] = useState(false);
 
   const formatValue = (value: any) => {
     if (value === null || value === undefined) return "N/A";
@@ -91,7 +95,8 @@ const InventoryReport: React.FC = () => {
           trans_date,
           product:product_code (
             product_long,
-            unit
+            unit,
+            sn_control
           )
         `, { count: 'exact' })
         .order('product_code', { ascending: true })
@@ -115,6 +120,7 @@ const InventoryReport: React.FC = () => {
             sku: item.product_code || "N/A",
             name: productInfo?.product_long || "N/A",
             unit: productInfo?.unit || "N/A", // Lấy ĐVT từ bảng product
+            sn_control: productInfo?.sn_control || false,
             start: item.start_qty,
             in: item.received_qty,
             out: totalOut,
@@ -151,6 +157,27 @@ const InventoryReport: React.FC = () => {
   useEffect(() => {
     fetchData(currentPage);
   }, [currentPage]);
+
+  useEffect(() => {
+    const fetchSN = async () => {
+      if (!showSN) return;
+      try {
+        setSNLoading(true);
+        const { data, error } = await supabase
+          .from('serial_tracking')
+          .select('*')
+          .eq('product_code', showSN);
+        
+        if (error) throw error;
+        setSerialNumbers(data || []);
+      } catch (error) {
+        console.error("Error fetching S/N:", error);
+      } finally {
+        setSNLoading(false);
+      }
+    };
+    fetchSN();
+  }, [showSN]);
 
   // Tính toán các chỉ số tổng hợp cho Header (Vẫn tính dựa trên dữ liệu hiện hiển thị hoặc cần query riêng nếu muốn tổng thực)
   const totalImport = products.reduce((acc, curr) => acc + (Number(curr.in) || 0), 0);
@@ -291,13 +318,33 @@ const InventoryReport: React.FC = () => {
                   ) : (
                     products.map((row, idx) => (
                       <tr key={idx} className={`hover:bg-primary/5 transition-colors group cursor-pointer ${row.alert ? 'bg-rose-50/30' : ''}`}>
-                        <td className="px-6 py-2.5 font-mono text-xs text-primary font-bold">{formatValue(row.sku)}</td>
+                        <td className="px-6 py-2.5 font-mono text-xs text-primary font-bold">
+                          <div className="flex items-center gap-2">
+                            {row.sn_control && (
+                              <span className="material-icons-round text-primary text-[14px]" title="Có quản lý S/N">qr_code</span>
+                            )}
+                            {formatValue(row.sku)}
+                          </div>
+                        </td>
                         <td className="px-6 py-2.5 font-bold text-slate-700 text-[13px]">{formatValue(row.name)}</td>
                         <td className="px-6 py-2.5 text-center text-slate-500 text-xs font-semibold">{formatValue(row.unit)}</td>
                         <td className="px-6 py-2.5 text-right font-bold text-slate-600">{formatNumber(row.start)}</td>
                         <td className="px-6 py-2.5 text-right font-bold text-emerald-600">{row.in > 0 ? `+${formatNumber(row.in)}` : '0'}</td>
                         <td className="px-6 py-2.5 text-right font-bold text-rose-600">{row.out > 0 ? `-${formatNumber(row.out)}` : '0'}</td>
-                        <td className={`px-6 py-2.5 text-right font-extrabold ${row.alert ? 'text-rose-600' : 'text-primary bg-primary/5'}`}>{formatNumber(row.end)}</td>
+                        <td className={`px-6 py-2.5 text-right font-extrabold ${row.alert ? 'text-rose-600' : 'text-primary bg-primary/5'}`}>
+                          <div className="flex items-center justify-end gap-2">
+                            {formatNumber(row.end)}
+                            {row.sn_control && (
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); setShowSN(row.sku); }}
+                                className="p-1 hover:bg-primary/10 rounded-md text-primary transition-colors"
+                                title="Xem chi tiết S/N"
+                              >
+                                <span className="material-icons-round text-sm">visibility</span>
+                              </button>
+                            )}
+                          </div>
+                        </td>
                       </tr>
                     ))
                   )}
@@ -351,6 +398,178 @@ const InventoryReport: React.FC = () => {
           )}
         </div>
       </div>
+      {/* S/N Details Modal */}
+      {showSN && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 shadow-2xl transition-all">
+          <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[80vh] animate-in fade-in zoom-in duration-200">
+            <div className="p-4 border-b border-border-light flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-3">
+                <span className="p-1.5 bg-primary/10 rounded-lg">
+                  <span className="material-icons-round text-primary">qr_code</span>
+                </span>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-sm">Danh sách Serial Number</h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{showSN}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowSN(null)}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-400 transition-colors"
+              >
+                <span className="material-icons-round text-sm">close</span>
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+              {snLoading ? (
+                <div className="py-10 text-center">
+                  <div className="inline-block w-6 h-6 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-2"></div>
+                  <p className="text-xs text-slate-500 font-medium">Đang tải danh sách S/N...</p>
+                </div>
+              ) : serialNumbers.length === 0 ? (
+                <div className="py-10 text-center text-slate-400 italic text-sm">
+                  Chưa có dữ liệu Serial Number cho sản phẩm này.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                   <div className="grid grid-cols-2 gap-2 mb-2 p-2 bg-slate-50 rounded-lg text-[10px] uppercase font-extrabold text-slate-400 tracking-widest">
+                      <span>Mã Serial</span>
+                      <span className="text-right">Trạng thái</span>
+                   </div>
+                  {serialNumbers.map((sn, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 rounded-xl border border-border-light hover:border-primary/30 transition-all hover:bg-primary/5 group">
+                      <div className="flex items-center gap-3">
+                         <div className="flex flex-col">
+                            <span className="text-xs font-mono font-bold text-slate-700">{sn.serial_number}</span>
+                            <span className="text-[9px] font-mono text-primary font-bold">{sn.product_code_and_sn}</span>
+                         </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                          sn.status === 'available' ? 'bg-emerald-100 text-emerald-600' : 
+                          sn.status === 'sold' ? 'bg-blue-100 text-blue-600' : 
+                          'bg-rose-100 text-rose-600'
+                        }`}>
+                          {sn.status === 'available' ? 'TRONG KHO' : 
+                           sn.status === 'sold' ? 'ĐÃ BÁN' : 
+                           sn.status.toUpperCase()}
+                        </span>
+                        {sn.po_code && (
+                           <div className="flex items-center gap-1 text-[9px] text-slate-400 font-bold">
+                              <span className="material-icons-round text-[10px]">shopping_cart</span>
+                              {sn.po_code}
+                           </div>
+                        )}
+                        {sn.so_code && (
+                           <div className="flex items-center gap-1 text-[9px] text-primary font-bold">
+                              <span className="material-icons-round text-[10px]">local_shipping</span>
+                              {sn.so_code}
+                           </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 ml-4">
+                        <button 
+                          onClick={() => setShowPrintLabel(sn)}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-primary/20 hover:text-primary transition-all"
+                          title="In tem QR"
+                        >
+                          <span className="material-icons-round text-sm">print</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* QR Label Print Modal */}
+      {showPrintLabel && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in duration-300">
+            <div className="p-6 border-b border-border-light flex items-center justify-between bg-slate-50/50">
+              <h3 className="font-black text-slate-800 text-sm uppercase tracking-widest flex items-center gap-2">
+                <span className="material-icons-round text-primary">print</span>
+                Xem trước tem QR
+              </h3>
+              <button onClick={() => setShowPrintLabel(null)} className="w-8 h-8 rounded-full hover:bg-slate-200 flex items-center justify-center transition-colors">
+                <span className="material-icons-round text-sm">close</span>
+              </button>
+            </div>
+            
+            <div className="p-10 flex flex-col items-center">
+              {/* This is the part that will be printed */}
+              <div id="print-label-content" className="bg-white p-6 border-2 border-slate-900 rounded-xl flex flex-col items-center gap-4 w-[250px] shadow-sm">
+                <div className="w-full text-center border-b border-slate-100 pb-2 mb-2">
+                   <p className="text-[10px] font-black text-slate-900 uppercase tracking-tighter">KHO HÀNG SÀI GÒN WMS</p>
+                </div>
+                
+                <img 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${showPrintLabel.product_code_and_sn}`}
+                  alt="QR Code"
+                  className="w-40 h-40"
+                />
+                
+                <div className="text-center space-y-1 mt-2">
+                   <p className="text-[14px] font-black text-slate-900 font-mono tracking-tight">{showPrintLabel.product_code_and_sn}</p>
+                   <p className="text-[10px] font-bold text-slate-400 uppercase">S/N: {showPrintLabel.serial_number}</p>
+                </div>
+              </div>
+
+              <div className="mt-10 w-full space-y-3">
+                 <button 
+                  onClick={() => {
+                    const printContent = document.getElementById('print-label-content');
+                    const windowUrl = 'about:blank';
+                    const uniqueName = new Date().getTime();
+                    const printWindow = window.open(windowUrl, uniqueName.toString(), 'left=50000,top=50000,width=0,height=0');
+                    if (printWindow) {
+                      printWindow.document.write(`
+                        <html>
+                          <head>
+                            <title>In Tem QR</title>
+                            <style>
+                              @page { size: auto; margin: 0mm; }
+                              body { margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; }
+                              .label { padding: 20px; border: 1px solid #000; display: flex; flex-direction: column; align-items: center; text-align: center; }
+                              img { width: 180px; height: 180px; margin: 10px 0; }
+                              .header { font-size: 10px; font-weight: bold; border-bottom: 1px solid #eee; width: 100%; padding-bottom: 5px; margin-bottom: 5px; }
+                              .code { font-size: 14px; font-weight: bold; font-family: monospace; }
+                              .sn { font-size: 10px; color: #666; }
+                            </style>
+                          </head>
+                          <body>
+                            <div class="label">
+                              <div class="header">KHO HÀNG SÀI GÒN WMS</div>
+                              <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${showPrintLabel.product_code_and_sn}" />
+                              <div class="code">${showPrintLabel.product_code_and_sn}</div>
+                              <div class="sn">S/N: ${showPrintLabel.serial_number}</div>
+                            </div>
+                            <script>
+                              window.onload = function() {
+                                window.print();
+                                window.onafterprint = function() { window.close(); };
+                              };
+                            </script>
+                          </body>
+                        </html>
+                      `);
+                      printWindow.document.close();
+                      printWindow.focus();
+                    }
+                  }}
+                  className="w-full bg-slate-900 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-slate-200 active:scale-95 text-xs uppercase tracking-widest"
+                 >
+                    <span className="material-icons-round">print</span>
+                    Xác nhận in tem
+                 </button>
+                 <p className="text-[10px] text-slate-400 text-center font-medium italic">Tem sẽ được in với kích thước chuẩn 50x50mm</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
