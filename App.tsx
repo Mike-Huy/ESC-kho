@@ -77,7 +77,7 @@ const App: React.FC = () => {
       case 'rpt_inbound': return <ComingSoon title="Báo cáo nhập" />;
       case 'rpt_proc': return <ComingSoon title="BC xử lý đơn" />;
       case 'rpt_outbound': return <ComingSoon title="BC xuất" />;
-      case 'rpt_inventory': return <ComingSoon title="Nhập-xuất-tồn" />;
+
       
       // Vận hành
       case 'op_split': return <ComingSoon title="Rã hàng chẵn" />;

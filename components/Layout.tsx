@@ -50,7 +50,6 @@ const navItems: NavItem[] = [
       { id: 'wh_list', label: 'Danh sách kho', icon: 'list' },
       { id: 'rackMap', label: 'Sơ đồ kho', icon: 'map' },
       { id: 'wh_location', label: 'Vị trí kho', icon: 'location_on' },
-      { id: 'inventory', label: 'Tồn kho', icon: 'inventory' },
     ]
   },
   { 
@@ -59,7 +58,7 @@ const navItems: NavItem[] = [
       { id: 'rpt_inbound', label: 'Báo cáo nhập', icon: 'summarize' },
       { id: 'rpt_proc', label: 'BC xử lý đơn', icon: 'fact_check' },
       { id: 'rpt_outbound', label: 'BC xuất', icon: 'assignment' },
-      { id: 'rpt_inventory', label: 'Nhập-xuất-tồn', icon: 'account_balance_wallet' },
+      { id: 'inventory', label: 'Xuất - Nhập - Tồn', icon: 'account_balance_wallet' },
     ]
   },
   { 
@@ -181,8 +180,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
               <img src="/logo-kho-hang-sg.jpg" alt="Logo" className="w-full h-full object-cover" />
             </div>
             <div className="flex-1">
-              <span className="font-extrabold text-[17px] tracking-tight text-white block leading-tight">KHO SÀI GÒN</span>
-              <span className="text-[10px] text-primary/80 font-bold uppercase tracking-widest">WMS System</span>
+              <span className="font-extrabold text-[19px] tracking-tight text-white block leading-tight">KHO SÀI GÒN</span>
+              <span className="text-[11px] text-primary/80 font-bold uppercase tracking-widest">WMS System</span>
             </div>
           </button>
         </div>
@@ -208,8 +207,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
                       : 'text-slate-400 hover:text-white hover:bg-white/5'
                   }`}
                 >
-                  <div className="flex items-center gap-3 text-sm font-bold">
-                    <span className={`material-icons-round text-[20px] ${
+                  <div className="flex items-center gap-3 text-[16px] font-bold">
+                    <span className={`material-icons-round text-[22px] ${
                       activePage === item.id || (hasChildren && item.children?.some(c => c.id === activePage))
                         ? 'text-primary' 
                         : 'text-slate-500 group-hover:text-slate-300'
@@ -219,7 +218,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
                     <span>{item.label}</span>
                   </div>
                   {hasChildren && (
-                    <span className={`material-icons-round text-sm transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                    <span className={`material-icons-round text-base transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
                       expand_more
                     </span>
                   )}
@@ -232,13 +231,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
                         <button
                           key={child.id}
                           onClick={() => handlePageChange(child.id as PageType)}
-                          className={`flex items-center gap-3 px-3 py-1 w-full rounded-md text-[13px] font-semibold transition-all ${
+                          className={`flex items-center gap-3 px-3 py-1.5 w-full rounded-md text-[15px] font-semibold transition-all ${
                             activePage === child.id 
                               ? 'text-white' 
                               : 'text-slate-500 hover:text-slate-300'
                           }`}
                         >
-                          <span className={`material-icons-round text-[6px] ${activePage === child.id ? 'text-primary scale-150' : 'text-slate-700'}`}>circle</span>
+                          <span className={`material-icons-round text-[8px] ${activePage === child.id ? 'text-primary scale-125' : 'text-slate-700'}`}>circle</span>
                           {child.label}
                         </button>
                       ))}

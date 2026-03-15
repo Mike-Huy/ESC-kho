@@ -24,5 +24,10 @@ Tệp này chứa các quy định bắt buộc mà AI Assistant (Antigravity) p
 - **GitHub Desktop**: Hỗ trợ người dùng push code thông qua GitHub Desktop. 
 - **Gitignore**: Luôn giữ `.env.local` và `node_modules` trong file `.gitignore`.
 
+## 5. Quản lý sản phẩm (có thể viết tắt SP hay sp)
+- **Thông tin sản phẩm**: luôn lấy data từ bảng 'product' trong supabase và trường product_code là khóa chính để đối chiếu mọi thông tin khác của sản phẩm
+- **Hình ảnh sản phẩm**: luôn lấy ảnh từ bucket của supabase, admmin có thể duyệt ảnh từ trong giao diện web, size tự co giãn để luôn thể hiện theo 1 chuẩn chung của toàn website
+- 
+
 ---
 *Ghi chú cho AI: Bạn phải luôn kiểm tra tệp này trước khi thực hiện bất kỳ thay đổi nào để đảm bảo tính nhất quán của toàn bộ dự án.*

@@ -19,7 +19,7 @@ export type PageType =
   // Kho hàng
   | 'wh_list' | 'wh_map' | 'wh_location' | 'wh_stock'
   // Báo cáo
-  | 'rpt_inbound' | 'rpt_proc' | 'rpt_outbound' | 'rpt_inventory'
+  | 'rpt_inbound' | 'rpt_proc' | 'rpt_outbound'
   // Vận hành
   | 'op_split' | 'op_repack' | 'op_audit' | 'op_replenish' | 'op_transfer'
   // Tài chính
