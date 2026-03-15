@@ -104,7 +104,7 @@ const InventoryReport: React.FC = () => {
 
       // Filter inventory records by website_id and check product visibility array
       query = query
-        .eq('website_id', APP_CONFIG.WEBSITE_ID)
+        .contains('website_id', [APP_CONFIG.WEBSITE_ID])
         .filter('product.website_id', 'cs', `{${APP_CONFIG.WEBSITE_ID}}`);
 
       const { data, error, count } = await query

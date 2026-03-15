@@ -26,7 +26,7 @@ const Routing: React.FC = () => {
       const { data, error } = await supabase
         .from('so')
         .select('id, so_code, customer_name, delivery_address, status, created_at')
-        .eq('website_id', APP_CONFIG.WEBSITE_ID)
+        .contains('website_id', [APP_CONFIG.WEBSITE_ID])
         .in('status', ['shipped', 'completed']) // Mocking orders ready for dispatch
         .order('created_at', { ascending: false });
 

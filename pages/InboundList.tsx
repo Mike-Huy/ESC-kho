@@ -31,7 +31,7 @@ const InboundList: React.FC<InboundListProps> = ({ onReceive, onNew }) => {
         `);
 
       // Filter by website_id
-      query = query.eq('website_id', APP_CONFIG.WEBSITE_ID);
+      query = query.contains('website_id', [APP_CONFIG.WEBSITE_ID]);
 
       const { data, error } = await query.order('order_date', { ascending: false });
 

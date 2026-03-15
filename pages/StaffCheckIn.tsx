@@ -92,7 +92,7 @@ const StaffCheckIn: React.FC<StaffCheckInProps> = ({ onExit, user }) => {
             work_date: today,
             check_in: now,
             status: 'present',
-            website_id: APP_CONFIG.WEBSITE_ID
+            website_id: [APP_CONFIG.WEBSITE_ID]
           });
         if (error) throw error;
       } else if (!currentAttendance.check_out) {

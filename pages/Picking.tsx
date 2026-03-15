@@ -37,7 +37,7 @@ const Picking: React.FC = () => {
           so_items (
             id,
             product_code,
-            quantity,
+            qty,
             product:product_code (
               product_long,
               unit,
@@ -45,7 +45,7 @@ const Picking: React.FC = () => {
             )
           )
         `)
-        .eq('website_id', APP_CONFIG.WEBSITE_ID)
+        .contains('website_id', [APP_CONFIG.WEBSITE_ID])
         .filter('so_items.product.website_id', 'cs', `{${APP_CONFIG.WEBSITE_ID}}`)
         .in('status', ['pending', 'new', 'processing'])
         .order('created_at', { ascending: true });
@@ -55,7 +55,7 @@ const Picking: React.FC = () => {
       if (data) {
         setOrders(data.map((o: any) => ({
           ...o,
-          total_items: o.so_items?.reduce((acc: number, item: any) => acc + (item.quantity || 0), 0) || 0,
+          total_items: o.so_items?.reduce((acc: number, item: any) => acc + (Number(item.qty) || 0), 0) || 0,
           picked_items: 0, // Mocking picked status
           items: o.so_items
         })));
@@ -106,7 +106,7 @@ const Picking: React.FC = () => {
                   <div className="flex items-center gap-6">
                      <div className="text-right">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Số lượng</p>
-                        <p className="text-2xl font-black text-slate-900">{item.quantity} {item.product?.unit}</p>
+                        <p className="text-2xl font-black text-slate-900">{item.qty} {item.product?.unit}</p>
                      </div>
                      <button className="w-14 h-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-lg hover:bg-primary transition-all">
                         <span className="material-icons-round">check</span>

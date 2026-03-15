@@ -33,6 +33,16 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onLoginSuccess }) => {
         throw new Error('Mật khẩu không chính xác');
       }
 
+      // Step 2.5: Verify Website Access (Multi-tenancy)
+      const { APP_CONFIG } = await import('../appConfig');
+      const allowedWebsites = Array.isArray(user.website_id) ? user.website_id : [];
+      
+      // If website_id mảng is empty, assume they have no access or we want to allow login?
+      // User requested to check if current website_id is in the array.
+      if (!allowedWebsites.includes(APP_CONFIG.WEBSITE_ID)) {
+        throw new Error(`Tài khoản không có quyền truy cập vào ${APP_CONFIG.WEBSITE_NAME}`);
+      }
+
       // Step 3: Fetch staff profile for permissions
       const { data: staffProfile, error: profileError } = await supabase
         .from('staff_profiles')

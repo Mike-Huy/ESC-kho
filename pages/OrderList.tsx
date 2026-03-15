@@ -36,7 +36,7 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail }) => {
 
       // Filter by website_id and product visibility
       query = query
-        .eq('website_id', APP_CONFIG.WEBSITE_ID)
+        .contains('website_id', [APP_CONFIG.WEBSITE_ID])
         .filter('so_items.product.website_id', 'cs', `{${APP_CONFIG.WEBSITE_ID}}`);
 
       query = query.order('created_at', { ascending: false });

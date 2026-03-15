@@ -32,10 +32,10 @@ const Packing: React.FC = () => {
           status,
           created_at,
           so_items (
-            quantity
+            qty
           )
         `)
-        .eq('website_id', APP_CONFIG.WEBSITE_ID)
+        .contains('website_id', [APP_CONFIG.WEBSITE_ID])
         .in('status', ['processing', 'shipped'])
         .order('created_at', { ascending: false });
 
@@ -44,8 +44,8 @@ const Packing: React.FC = () => {
       if (data) {
         setOrders(data.map((o: any) => ({
           ...o,
-          total_qty: o.so_items?.reduce((acc: number, item: any) => acc + (item.quantity || 0), 0) || 0,
-          packed_qty: o.status === 'shipped' ? o.so_items?.reduce((acc: number, item: any) => acc + (item.quantity || 0), 0) : Math.floor(Math.random() * 5), // Mocking partially packed
+          total_qty: o.so_items?.reduce((acc: number, item: any) => acc + (Number(item.qty) || 0), 0) || 0,
+          packed_qty: o.status === 'shipped' ? o.so_items?.reduce((acc: number, item: any) => acc + (Number(item.qty) || 0), 0) : Math.floor(Math.random() * 5), // Mocking partially packed
         })));
       }
     } catch (error) {

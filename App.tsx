@@ -10,6 +10,8 @@ import RackMap from './pages/RackMap';
 import PutAway from './pages/PutAway';
 import OrderList from './pages/OrderList';
 import OrderDetail from './pages/OrderDetail';
+import WarehouseLocation from './pages/WarehouseLocation';
+import WarehouseMap from './pages/WarehouseMap';
 import TaskProgress from './pages/TaskProgress';
 import StaffCheckIn from './pages/StaffCheckIn';
 import StaffAdmin from './pages/StaffAdmin';
@@ -84,9 +86,9 @@ const App: React.FC = () => {
       
       // Kho hàng
       case 'product_list': return <ProductList />;
-      case 'wh_list': return <ComingSoon title="Danh sách kho" />;
-      case 'wh_map': return <ComingSoon title="Sơ đồ kho" />;
-      case 'wh_location': return <ComingSoon title="Vị trí kho" />;
+      case 'wh_list': 
+      case 'wh_location': return <WarehouseLocation />;
+      case 'wh_map': return <WarehouseMap />;
       case 'wh_stock': return <ComingSoon title="Tồn kho" />;
       
       // Báo cáo

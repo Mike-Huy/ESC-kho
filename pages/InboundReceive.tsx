@@ -78,7 +78,8 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
             ordered_qty: it.quantity || it.ordered_qty || 1,
             received_qty: it.received_qty || 0,
             unit: it.unit || 'cái',
-            vat_rate: it.vat_rate || 0.1
+            vat_rate: it.vat_rate || 0.1,
+            website_id: [APP_CONFIG.WEBSITE_ID]
           }));
           await supabase.from('po_items').insert(itemsToInsert);
           const { data: refetch } = await supabase
@@ -241,7 +242,7 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
             ordered_qty: item.ordered_qty,
             received_qty: qty,
             unit: item.unit,
-            website_id: APP_CONFIG.WEBSITE_ID
+            website_id: [APP_CONFIG.WEBSITE_ID]
           });
         }
       }
@@ -266,7 +267,7 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
               serial_number: sn,
               status: 'available',
               po_code: poCode,
-              website_id: APP_CONFIG.WEBSITE_ID
+              website_id: [APP_CONFIG.WEBSITE_ID]
             });
           });
         }

@@ -25,10 +25,10 @@ const InboundReturn: React.FC = () => {
           total_amount,
           so_items (
             product_code,
-            quantity
+            qty
           )
         `)
-        .eq('website_id', APP_CONFIG.WEBSITE_ID)
+        .contains('website_id', [APP_CONFIG.WEBSITE_ID])
         .in('status', ['returned', 'cancelled'])
         .order('created_at', { ascending: false });
 
