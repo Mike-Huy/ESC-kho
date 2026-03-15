@@ -24,6 +24,7 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [departments, setDepartments] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingStaffId, setEditingStaffId] = useState<number | null>(null);
   
   // Form fields
   const [newStaff, setNewStaff] = useState({
@@ -102,7 +103,7 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
     fetchDepartments();
   }, []);
 
-  const handleAddStaff = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStaff.fullName || !newStaff.phone || !newStaff.deptId) {
       alert('Vui lòng điền đầy đủ thông tin bắt buộc');
@@ -112,45 +113,109 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
     try {
       setIsSubmitting(true);
       
-      // 1. Insert into users
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .insert([{
-          full_name: newStaff.fullName,
-          phone: newStaff.phone,
-          pass: '123456',
-          user_type: 'staff',
-          website_id: [APP_CONFIG.WEBSITE_ID]
-        }])
-        .select()
-        .single();
+      if (editingStaffId) {
+        // Update mode
+        // 1. Update users
+        const { error: userError } = await supabase
+          .from('users')
+          .update({
+            full_name: newStaff.fullName,
+            phone: newStaff.phone
+          })
+          .eq('id', editingStaffId);
+        
+        if (userError) throw userError;
 
-      if (userError) throw userError;
+        // 2. Update staff_profiles
+        const { error: profileError } = await supabase
+          .from('staff_profiles')
+          .update({
+            dept_id: parseInt(newStaff.deptId)
+          })
+          .eq('user_id', editingStaffId);
 
-      // 2. Insert into staff_profiles
-      const { error: profileError } = await supabase
-        .from('staff_profiles')
-        .insert([{
-          user_id: userData.id,
-          dept_id: parseInt(newStaff.deptId),
-          website_id: [APP_CONFIG.WEBSITE_ID],
-          position: 'Nhân viên'
-        }]);
+        if (profileError) throw profileError;
 
-      if (profileError) throw profileError;
+        alert('Cập nhật thông tin thành công!');
+      } else {
+        // Insert mode
+        // 1. Insert into users
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .insert([{
+            full_name: newStaff.fullName,
+            phone: newStaff.phone,
+            pass: '123456',
+            user_type: 'staff',
+            website_id: [APP_CONFIG.WEBSITE_ID]
+          }])
+          .select()
+          .single();
+
+        if (userError) throw userError;
+
+        // 2. Insert into staff_profiles
+        const { error: profileError } = await supabase
+          .from('staff_profiles')
+          .insert([{
+            user_id: userData.id,
+            dept_id: parseInt(newStaff.deptId),
+            website_id: [APP_CONFIG.WEBSITE_ID],
+            position: 'Nhân viên'
+          }]);
+
+        if (profileError) throw profileError;
+        alert('Thêm nhân viên thành công!');
+      }
 
       // Reset and close
       setNewStaff({ fullName: '', phone: '', deptId: '' });
+      setEditingStaffId(null);
       setIsAddModalOpen(false);
       fetchStaff();
-      alert('Thêm nhân viên thành công!');
       
     } catch (err: any) {
-      console.error('Error adding staff:', err);
+      console.error('Error saving staff:', err);
       alert('Lỗi: ' + err.message);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleDelete = async (member: StaffMember) => {
+    if (!window.confirm(`Bạn có chắc muốn xóa nhân viên "${member.full_name}"?`)) return;
+
+    try {
+      setLoading(true);
+      // Delete staff_profiles first (child table)
+      const { error: pError } = await supabase.from('staff_profiles').delete().eq('user_id', member.id);
+      if (pError) throw pError;
+
+      // Delete user
+      const { error: uError } = await supabase.from('users').delete().eq('id', member.id);
+      if (uError) throw uError;
+
+      alert('Đã xóa nhân viên thành công!');
+      fetchStaff();
+    } catch (err: any) {
+      console.error('Error deleting staff:', err);
+      alert('Lỗi khi xóa: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditClick = (member: StaffMember) => {
+    const originalItem = staff.find(s => s.id === member.id);
+    const dept = departments.find(d => d.name === member.department);
+    
+    setNewStaff({
+      fullName: member.full_name,
+      phone: member.phone,
+      deptId: dept?.id?.toString() || ''
+    });
+    setEditingStaffId(member.id);
+    setIsAddModalOpen(true);
   };
 
   return (
@@ -165,7 +230,11 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
                 <span className="material-icons-round text-sm">filter_list</span> Bộ lọc
             </button>
             <button 
-              onClick={() => setIsAddModalOpen(true)}
+              onClick={() => {
+                setEditingStaffId(null);
+                setNewStaff({ fullName: '', phone: '', deptId: '' });
+                setIsAddModalOpen(true);
+              }}
               className="bg-primary hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-md transition-all active:scale-95"
             >
                 <span className="material-icons-round text-xs">person_add</span> Thêm nhân viên
@@ -258,10 +327,18 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
                         >
                           <span className="material-icons-round text-lg">contact_page</span>
                         </button>
-                        <button className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-white hover:text-primary hover:shadow-sm transition-all">
+                        <button 
+                          onClick={() => handleEditClick(member)}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-white hover:text-primary hover:shadow-sm transition-all"
+                          title="Sửa thông tin"
+                        >
                           <span className="material-icons-round text-lg">edit</span>
                         </button>
-                        <button className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-white hover:text-red-500 hover:shadow-sm transition-all">
+                        <button 
+                          onClick={() => handleDelete(member)}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-white hover:text-red-500 hover:shadow-sm transition-all"
+                          title="Xóa nhân viên"
+                        >
                           <span className="material-icons-round text-lg">delete_outline</span>
                         </button>
                       </div>
@@ -291,8 +368,8 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
           <div className="w-full max-w-lg bg-white rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in duration-300">
             <div className="p-8 border-b border-slate-50 flex justify-between items-center">
                <div>
-                  <h2 className="text-xl font-black text-slate-900 uppercase">THÊM NHÂN VIÊN MỚI</h2>
-                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Khởi tạo tài khoản nhân sự mới</p>
+                  <h2 className="text-xl font-black text-slate-900 uppercase">{editingStaffId ? 'CẬP NHẬT NHÂN VIÊN' : 'THÊM NHÂN VIÊN MỚI'}</h2>
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">{editingStaffId ? 'Chỉnh sửa thông tin tài khoản' : 'Khởi tạo tài khoản nhân sự mới'}</p>
                </div>
                <button 
                  onClick={() => setIsAddModalOpen(false)}
@@ -302,7 +379,7 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
                </button>
             </div>
             
-            <form onSubmit={handleAddStaff} className="p-8 space-y-6">
+            <form onSubmit={handleSubmit} className="p-8 space-y-6">
                <div className="grid grid-cols-1 gap-6">
                   <div>
                     <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2 px-1">Tên nhân viên (Bắt buộc)</label>
@@ -362,7 +439,7 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
                    disabled={isSubmitting}
                    className="flex-[2] px-6 py-4 rounded-2xl bg-primary text-white font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-primary/20 disabled:opacity-50"
                  >
-                   {isSubmitting ? 'ĐANG XỬ LÝ...' : 'XÁC NHẬN THÊM'}
+                   {isSubmitting ? 'ĐANG XỬ LÝ...' : (editingStaffId ? 'CẬP NHẬT THÔNG TIN' : 'XÁC NHẬN THÊM MỚI')}
                  </button>
                </div>
             </form>
