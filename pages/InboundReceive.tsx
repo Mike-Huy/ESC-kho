@@ -30,6 +30,12 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
 
   const [poInfo, setPoInfo] = useState<any>(null);
 
+  const getProductImageUrl = (imagePath: string) => {
+    if (!imagePath) return "https://zrjwslcxbfefzjlgctci.supabase.co/storage/v1/object/public/product_images/placeholder.png";
+    if (imagePath.startsWith('http')) return imagePath;
+    return `https://zrjwslcxbfefzjlgctci.supabase.co/storage/v1/object/public/product_images/${imagePath}`;
+  };
+
   useEffect(() => {
     fetchPODetails();
   }, [poCode]);
@@ -37,9 +43,6 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
   const fetchPODetails = async () => {
     try {
       setLoading(true);
-      console.log('Fetching details for PO:', poCode);
-      
-      // 1. Fetch PO info
       const { data: poData, error: poError } = await supabase
         .from('po')
         .select('*')
@@ -49,7 +52,6 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
       if (poError || !poData) throw new Error(poError?.message || 'Không tìm thấy đơn hàng');
       setPoInfo(poData);
 
-      // 2. Fetch items from relational table
       let { data: itemData, error: itemError } = await supabase
         .from('po_items')
         .select(`
@@ -66,11 +68,9 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
         `)
         .eq('po_id', poData.id);
 
-      // 3. Migration Fallback: If relational table is empty, use JSON items
       if (!itemData || itemData.length === 0) {
         const jsonItems = poData.items || [];
         if (jsonItems.length > 0) {
-          console.log('Migrating items from JSON...');
           const itemsToInsert = jsonItems.map((it: any) => ({
             po_id: poData.id,
             product_code: it.product_code,
@@ -79,10 +79,7 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
             unit: it.unit || 'cái',
             vat_rate: it.vat_rate || 0.1
           }));
-
           await supabase.from('po_items').insert(itemsToInsert);
-          
-          // Re-fetch items
           const { data: refetch } = await supabase
             .from('po_items')
             .select(`
@@ -94,21 +91,6 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
         }
       }
 
-      // 4. Secondary Fallback: If join failed (product is null), fetch products manually
-      if (itemData && itemData.some((it: any) => !it.product)) {
-        const codes = itemData.map((it: any) => it.product_code);
-        const { data: prods } = await supabase
-          .from('product')
-          .select('product_code, product_long, sn_control, image')
-          .in('product_code', codes);
-        
-        itemData = itemData.map((it: any) => ({
-          ...it,
-          product: it.product || prods?.find(p => p.product_code === it.product_code)
-        }));
-      }
-
-      // 5. Fetch serials
       const { data: snData } = await supabase
         .from('serial_tracking')
         .select('product_code, serial_number')
@@ -127,8 +109,6 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
       });
 
       setItems(finalItems);
-      console.log('Successfully loaded items:', finalItems.length);
-
     } catch (error: any) {
       console.error('Error fetching PO details:', error);
       alert('Lỗi tải dữ liệu: ' + error.message);
@@ -145,23 +125,19 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
     let productCode = value;
     let serialNumber: string | null = null;
 
-    // 1. Detect combined QR: [PRODUCT_CODE]-[S/N]
     if (value.includes('-')) {
       const parts = value.split('-');
       productCode = parts[0];
       serialNumber = parts.slice(1).join('-');
     }
 
-    // 2. Find the target item
     let itemIdx = items.findIndex(it => it.product_code === productCode);
 
-    // 3. If not found by product code, check if it's just an S/N for current active item
     if (itemIdx === -1 && activeItemIdx !== null) {
       itemIdx = activeItemIdx;
       serialNumber = value;
     }
 
-    // 4. Default: If it doesn't match a product code, check if any SN item needs entry
     if (itemIdx === -1) {
       itemIdx = items.findIndex(it => it.product?.sn_control && it.scanned_serials.length < it.ordered_qty);
       if (itemIdx !== -1) serialNumber = value;
@@ -246,8 +222,6 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
   const handleConfirmReceive = async () => {
     try {
       setReceiving(true);
-      
-      // Validation: All SN products must have enough serials
       for (const item of items) {
         if (item.product?.sn_control && item.scanned_serials.length < item.ordered_qty) {
            const ok = window.confirm(`Sản phẩm ${item.product_code} chưa đủ S/N (${item.scanned_serials.length}/${item.ordered_qty}). Bạn vẫn muốn lưu?`);
@@ -255,46 +229,30 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
         }
       }
 
-      // 1. Update po_items (received_qty)
       for (const item of items) {
         const qty = item.product?.sn_control ? item.scanned_serials.length : item.received_qty;
-        
         if (item.id > 0) {
-          // Already in po_items table
-          await supabase
-            .from('po_items')
-            .update({ received_qty: qty })
-            .eq('id', item.id);
+          await supabase.from('po_items').update({ received_qty: qty }).eq('id', item.id);
         } else {
-          // Came from po.items JSON, insert into po_items table for better tracking
-          await supabase
-            .from('po_items')
-            .insert({
-              po_id: poInfo.id,
-              product_code: item.product_code,
-              ordered_qty: item.ordered_qty,
-              received_qty: qty,
-              unit: item.unit
-            });
+          await supabase.from('po_items').insert({
+            po_id: poInfo.id,
+            product_code: item.product_code,
+            ordered_qty: item.ordered_qty,
+            received_qty: qty,
+            unit: item.unit
+          });
         }
       }
 
-      // 1b. Update the JSON in 'po' table as well for consistency
       const updatedJsonItems = items.map(it => ({
         product_code: it.product_code,
         quantity: it.ordered_qty,
         received_qty: it.product?.sn_control ? it.scanned_serials.length : it.received_qty,
         unit: it.unit,
-        // keep other fields if any
         ...(poInfo.items.find((orig: any) => orig.product_code === it.product_code) || {})
       }));
 
-      await supabase
-        .from('po')
-        .update({ items: updatedJsonItems })
-        .eq('id', poInfo.id);
-
-      // 2. Clear then Insert Serial Tracking for this PO (to be safe)
+      await supabase.from('po').update({ items: updatedJsonItems }).eq('id', poInfo.id);
       await supabase.from('serial_tracking').delete().eq('po_code', poCode);
       
       const snEntries: any[] = [];
@@ -312,15 +270,11 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
       });
 
       if (snEntries.length > 0) {
-        const { error: snError } = await supabase.from('serial_tracking').insert(snEntries);
-        if (snError) throw snError;
+        await supabase.from('serial_tracking').insert(snEntries);
       }
 
-      // 3. Update PO status
       await supabase.from('po').update({ status: 'received', actual_delivery: new Date().toISOString() }).eq('po_code', poCode);
-
       onBack();
-      
     } catch (error) {
       console.error('Error receiving goods:', error);
       alert('Đã có lỗi xảy ra!');
@@ -384,26 +338,46 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
                 <span className="text-[10px] font-black bg-white px-4 py-1.5 rounded-full border border-slate-100 text-slate-400">{items.length} MẶT HÀNG</span>
              </div>
              
-             <div className="divide-y divide-slate-50">
+             <div className="px-6 py-4 space-y-4 bg-slate-50/30">
                 {items.map((item, idx) => (
-                  <div key={idx} className={`p-8 transition-all ${activeItemIdx === idx ? 'bg-primary/5 ring-2 ring-primary/20 ring-inset' : ''}`}>
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                      <div className="flex items-center gap-6">
-                         <div className="w-16 h-16 bg-slate-50 rounded-2xl overflow-hidden border border-slate-100 p-2 shrink-0">
-                            <img src={item.product?.image || ""} className="w-full h-full object-contain" />
+                  <div key={idx} className={`bg-white rounded-[2rem] border transition-all duration-300 overflow-hidden ${activeItemIdx === idx ? 'border-primary ring-4 ring-primary/10 shadow-xl' : 'border-slate-200 shadow-sm hover:shadow-md'}`}>
+                    <div className="p-3 md:p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                         <div className="w-12 h-12 bg-slate-50 rounded-xl overflow-hidden border border-slate-100 p-1 shrink-0 flex items-center justify-center">
+                            <img src={getProductImageUrl(item.product?.image || "")} className="w-full h-full object-contain" />
                          </div>
                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                               <span className="text-xs font-mono font-black text-primary bg-primary/5 px-2 py-0.5 rounded border border-primary/10">{item.product_code}</span>
-                               {item.product?.sn_control && <span className="material-icons-round text-primary text-sm" title="Quản lý S/N">qr_code</span>}
+                            <div className="flex items-center flex-wrap gap-2 mb-1">
+                               <span className="text-[11px] font-mono font-black text-primary bg-primary/5 px-2 py-0.5 rounded border border-primary/10">{item.product_code}</span>
+                               
+                               {/* S/N Tags displayed next to product code as requested */}
+                               {item.scanned_serials.map((sn, sIdx) => (
+                                 <div key={sIdx} className="group flex items-center gap-1.5 text-[11px] font-mono font-black text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 shadow-sm transition-all hover:bg-slate-200">
+                                   {sn}
+                                   <button 
+                                     onClick={(e) => {
+                                       e.stopPropagation();
+                                       const updatedSerials = item.scanned_serials.filter((_, i) => i !== sIdx);
+                                       const newItems = [...items];
+                                       newItems[idx] = { ...item, scanned_serials: updatedSerials, received_qty: updatedSerials.length };
+                                       setItems(newItems);
+                                     }}
+                                     className="text-slate-400 hover:text-red-500 transition-colors"
+                                   >
+                                     <span className="material-icons-round text-[12px]">close</span>
+                                   </button>
+                                 </div>
+                               ))}
+
+                               {item.product?.sn_control && <span className="material-icons-round text-primary/40 text-[18px]" title="Sản phẩm quản lý S/N">qr_code</span>}
                             </div>
-                            <h4 className="font-black text-slate-900 text-sm leading-tight uppercase">{item.product?.product_long}</h4>
+                            <h4 className="font-black text-slate-900 text-[13px] leading-snug uppercase tracking-tight">{item.product?.product_long}</h4>
                          </div>
                       </div>
                       
-                      <div className="flex items-center gap-12 shrink-0">
+                      <div className="flex items-center gap-8 shrink-0">
                          <div className="text-center">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Thực nhận</p>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Thực nhận</p>
                             <div className="flex items-center gap-2">
                                {!item.product?.sn_control ? (
                                  <input 
@@ -412,85 +386,73 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
                                    max={item.ordered_qty}
                                    value={item.received_qty}
                                    onChange={(e) => updateNonSNQty(idx, e.target.value)}
-                                   className="w-20 bg-slate-50 border-2 border-slate-100 rounded-lg px-2 py-1 text-center font-black text-slate-900 focus:border-primary outline-none"
+                                   className="w-16 bg-slate-50 border-2 border-slate-100 rounded-lg px-2 py-0.5 text-center font-black text-slate-900 focus:border-primary outline-none"
                                  />
                                ) : (
-                                 <span className="text-2xl font-black text-slate-900">
+                                 <span className="text-xl font-black text-slate-900">
                                    {item.scanned_serials.length}
                                  </span>
                                )}
                                <span className="text-slate-300 font-bold">/</span>
-                               <span className="text-lg font-bold text-slate-400">{item.ordered_qty}</span>
+                               <span className="text-base font-bold text-slate-400">{item.ordered_qty}</span>
                                <span className="text-[10px] font-bold text-slate-400 ml-1">{item.unit}</span>
                             </div>
                          </div>
-                         <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
+                         <div className="w-20 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
                             <div 
-                              className={`h-full transition-all duration-500 ${
+                              className={`h-full transition-all duration-700 ease-out ${
                                 (item.product?.sn_control ? item.scanned_serials.length : item.received_qty) >= item.ordered_qty ? 'bg-emerald-500' : 'bg-primary'
                               }`}
                               style={{ width: `${Math.min(100, ((item.product?.sn_control ? item.scanned_serials.length : item.received_qty) / item.ordered_qty) * 100)}%` }}
                             ></div>
-                         </div>
+                          </div>
                       </div>
                     </div>
 
-                    {/* SN Display and Manual Input */}
+                    {/* Manual Input Section - Cleaner and integrated */}
                     {item.product?.sn_control && (
-                      <div className="mt-6 p-6 bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
-                         <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2">
-                               <span className="text-xs font-black text-slate-600 uppercase tracking-tight">Số Serial đã nhận ({item.scanned_serials.length})</span>
-                            </div>
-                            <button 
-                              onClick={() => setActiveItemIdx(activeItemIdx === idx ? null : idx)}
-                              className="text-[10px] font-black text-primary uppercase border-b-2 border-primary/20 hover:border-primary transition-all"
-                            >
-                              {activeItemIdx === idx ? 'ĐANG NHẬP S/N...' : '+ NHẬP THỦ CÔNG'}
-                            </button>
-                         </div>
-
-                         {activeItemIdx === idx && (
-                           <div className="flex gap-2 mb-4 animate-in slide-in-from-top-2">
-                              <input 
-                                autoFocus
-                                placeholder="Nhập số Serial..."
-                                className="flex-1 bg-white border-2 border-primary/20 rounded-xl px-4 py-2 text-sm font-bold outline-none focus:border-primary"
-                                onKeyPress={(e) => {
-                                  if (e.key === 'Enter') {
-                                    addManualSN(idx, (e.target as HTMLInputElement).value);
-                                    (e.target as HTMLInputElement).value = '';
-                                  }
-                                }}
-                              />
+                      <div className={`transition-all duration-300 border-t ${activeItemIdx === idx ? 'bg-primary/[0.02] border-primary/10' : 'bg-white border-transparent'}`}>
+                        <div className="px-5 py-2 flex items-center justify-between">
+                           <div className="flex items-center gap-3">
+                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-primary/40"></span>
+                                Nhập số Serial còn thiếu
+                              </span>
                            </div>
-                         )}
-
-                         <div className="flex flex-wrap gap-2">
-                            {item.scanned_serials.map((sn, sIdx) => (
-                              <div key={sIdx} className="bg-white border border-slate-200 px-3 py-1.5 rounded-xl flex items-center gap-3 group shadow-sm hover:border-primary/50 transition-all">
-                                 <span className="text-xs font-mono font-black text-slate-700">{sn}</span>
-                                 <button 
-                                   onClick={() => {
-                                     const updatedSerials = item.scanned_serials.filter((_, i) => i !== sIdx);
-                                     const newItems = [...items];
-                                     newItems[idx] = {
-                                       ...item,
-                                       scanned_serials: updatedSerials,
-                                       received_qty: updatedSerials.length
-                                     };
-                                     setItems(newItems);
-                                   }}
-                                   className="text-slate-300 hover:text-rose-500 transition-colors"
-                                 >
-                                    <span className="material-icons-round text-sm">close</span>
-                                 </button>
-                               </div>
-                            ))}
-                         </div>
-                         {item.scanned_serials.length === 0 && !activeItemIdx && (
-                           <div className="text-center py-4 text-slate-300 text-[10px] font-black uppercase tracking-widest italic opacity-60">Chờ quét số Serial</div>
-                         )}
+                           <button 
+                             onClick={() => setActiveItemIdx(activeItemIdx === idx ? null : idx)}
+                             className={`text-[10px] font-black uppercase px-3 py-1 rounded-lg transition-all ${
+                               activeItemIdx === idx ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105' : 'text-primary hover:bg-primary/5 border border-primary/10'
+                             }`}
+                           >
+                             {activeItemIdx === idx ? 'Đang nhập...' : '+ NHẬP THỦ CÔNG'}
+                           </button>
+                        </div>
+                        
+                        {activeItemIdx === idx && (
+                          <div className="px-5 pb-4 animate-in slide-in-from-top-2 duration-300">
+                             <div className="flex gap-2 bg-white p-1.5 rounded-xl border-2 border-primary/20 focus-within:border-primary transition-all shadow-sm focus-within:ring-4 ring-primary/5">
+                                <input 
+                                  autoFocus
+                                  className="flex-1 bg-transparent px-3 py-1.5 text-sm font-bold text-slate-900 outline-none placeholder:text-slate-300 placeholder:font-normal"
+                                  placeholder="Nhập serial và nhấn Enter..."
+                                  value={scanValue}
+                                  onChange={(e) => setScanValue(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      addManualSN(idx, scanValue);
+                                    }
+                                  }}
+                                />
+                                <button 
+                                  onClick={() => addManualSN(idx, scanValue)}
+                                  className="bg-primary text-white px-4 py-1.5 rounded-lg text-xs font-black uppercase hover:bg-blue-700 transition-all"
+                                >
+                                  Ghi nhận
+                                </button>
+                             </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
