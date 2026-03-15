@@ -109,7 +109,8 @@ const InboundNew: React.FC = () => {
         .insert([{
           po_code: poCode,
           supplier_name: supplier,
-          status: 'pending'
+          status: 'pending',
+          website_id: APP_CONFIG.WEBSITE_ID
         }])
         .select()
         .single();
@@ -121,7 +122,8 @@ const InboundNew: React.FC = () => {
         po_id: poData.id,
         product_code: item.product_code,
         ordered_qty: item.qty,
-        unit: item.unit
+        unit: item.unit,
+        website_id: APP_CONFIG.WEBSITE_ID
       }));
       
       const { error: itemError } = await supabase
@@ -139,7 +141,8 @@ const InboundNew: React.FC = () => {
               product_code: item.product_code,
               serial_number: sn,
               status: 'available',
-              po_code: poCode
+              po_code: poCode,
+              website_id: APP_CONFIG.WEBSITE_ID
             });
           });
         }

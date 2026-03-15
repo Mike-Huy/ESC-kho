@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
+import { APP_CONFIG } from '../appConfig';
 
 interface StaffCheckInProps {
   onExit: () => void;
@@ -90,7 +91,8 @@ const StaffCheckIn: React.FC<StaffCheckInProps> = ({ onExit, user }) => {
             user_id: user.id,
             work_date: today,
             check_in: now,
-            status: 'present'
+            status: 'present',
+            website_id: APP_CONFIG.WEBSITE_ID
           });
         if (error) throw error;
       } else if (!currentAttendance.check_out) {

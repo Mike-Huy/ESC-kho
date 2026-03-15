@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../supabaseClient';
+import { APP_CONFIG } from '../appConfig';
 
 interface InboundReceiveProps {
   poCode: string;
@@ -239,7 +240,8 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
             product_code: item.product_code,
             ordered_qty: item.ordered_qty,
             received_qty: qty,
-            unit: item.unit
+            unit: item.unit,
+            website_id: APP_CONFIG.WEBSITE_ID
           });
         }
       }
@@ -263,7 +265,8 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
               product_code: item.product_code,
               serial_number: sn,
               status: 'available',
-              po_code: poCode
+              po_code: poCode,
+              website_id: APP_CONFIG.WEBSITE_ID
             });
           });
         }

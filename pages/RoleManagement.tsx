@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
+import { APP_CONFIG } from '../appConfig';
 
 interface Role {
   id: number;
@@ -115,7 +116,10 @@ const RoleManagement: React.FC = () => {
             can_add: perm.can_add
           }).eq('id', perm.id);
         } else {
-          await supabase.from('erp_role_permissions').insert(perm);
+          await supabase.from('erp_role_permissions').insert({
+            ...perm,
+            website_id: APP_CONFIG.WEBSITE_ID
+          });
         }
       }
       alert('Đã lưu phân quyền thành công!');
