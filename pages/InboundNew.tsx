@@ -36,6 +36,7 @@ const InboundNew: React.FC = () => {
     const { data, error } = await supabase
       .from('product')
       .select('product_code, product_long, sn_control, unit')
+      .contains('website_id', [APP_CONFIG.WEBSITE_ID])
       .or(`product_code.ilike.%${q}%,product_long.ilike.%${q}%`)
       .limit(5);
     

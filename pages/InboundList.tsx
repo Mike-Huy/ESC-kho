@@ -105,12 +105,12 @@ const InboundList: React.FC<InboundListProps> = ({ onReceive, onNew }) => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50">
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mã Đơn Nhập</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nhà Cung Cấp</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ngày Đặt</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Giá Trị</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Trạng Thái</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Thao Tác</th>
+                <th className="px-8 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mã Đơn Nhập</th>
+                <th className="px-8 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nhà Cung Cấp</th>
+                <th className="px-8 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ngày Đặt</th>
+                <th className="px-8 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Giá Trị</th>
+                <th className="px-8 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Trạng Thái</th>
+                <th className="px-8 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Thao Tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -127,26 +127,31 @@ const InboundList: React.FC<InboundListProps> = ({ onReceive, onNew }) => {
               ) : (
                 filteredPos.map((po) => (
                   <tr key={po.id} className="group hover:bg-slate-50/80 transition-all">
-                    <td className="px-8 py-5">
-                       <span className="font-mono font-black text-primary bg-primary/5 px-3 py-1.5 rounded-lg border border-primary/10">{po.po_code}</span>
+                    <td className="px-8 py-3">
+                       <button 
+                         onClick={() => onReceive(po.po_code)}
+                         className="font-mono font-black text-primary bg-primary/5 px-3 py-1.5 rounded-lg border border-primary/10 hover:bg-primary hover:text-white transition-all scale-95 active:scale-90"
+                       >
+                         {po.po_code}
+                       </button>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-8 py-3">
                        <div className="font-bold text-slate-800 uppercase tracking-tighter">{po.supplier_name}</div>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-8 py-3">
                        <div className="text-sm font-bold text-slate-600">{new Date(po.order_date).toLocaleDateString('vi-VN')}</div>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-8 py-3">
                        <div className="text-sm font-black text-slate-900">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(po.total_amount || 0)}</div>
                     </td>
-                    <td className="px-8 py-5 text-center">
+                    <td className="px-8 py-3 text-center">
                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${getStatusStyle(po.status)}`}>
                          {po.status === 'received' ? 'Đã nhận' : 
                           po.status === 'pending' ? 'Chờ nhận' : 
                           po.status === 'draft' ? 'Nháp' : po.status}
                        </span>
                     </td>
-                    <td className="px-8 py-5 text-right">
+                    <td className="px-8 py-3 text-right">
                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
                           {(po.status === 'pending' || po.status === 'draft') && (
                             <button 

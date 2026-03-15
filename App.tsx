@@ -21,6 +21,11 @@ import ProductList from './pages/ProductList';
 import InboundNew from './pages/InboundNew';
 import InboundList from './pages/InboundList';
 import InboundReceive from './pages/InboundReceive';
+import Picking from './pages/Picking';
+import Packing from './pages/Packing';
+import Routing from './pages/Routing';
+import InboundReturn from './pages/InboundReturn';
+import InternalProcess from './pages/InternalProcess';
 
 const App: React.FC = () => {
   const [activePage, setActivePage] = useState<PageType>('dashboard');
@@ -63,14 +68,14 @@ const App: React.FC = () => {
       case 'inbound_new': return <InboundNew />;
       case 'inbound_list': return <InboundList onReceive={(code) => { setSelectedPOCode(code); setActivePage('inbound_receive'); }} onNew={() => setActivePage('inbound_new')} />;
       case 'inbound_receive': return <InboundReceive poCode={selectedPOCode || ''} onBack={() => setActivePage('inbound_list')} />;
-      case 'inbound_return': return <ComingSoon title="Hàng trả" />;
-      case 'inbound_internal': return <ComingSoon title="Xử lý nội bộ" />;
+      case 'inbound_return': return <InboundReturn />;
+      case 'inbound_internal': return <InternalProcess />;
       
       // Xử lý đơn
-      case 'proc_list': return <ComingSoon title="Danh sách đơn" />;
-      case 'proc_pick': return <ComingSoon title="Soạn đơn" />;
-      case 'proc_pack': return <ComingSoon title="Đóng gói" />;
-      case 'proc_route': return <ComingSoon title="Xếp tuyến" />;
+      case 'proc_list': return <OrderList onViewDetail={(id) => { setSelectedOrderCode(id); setActivePage('orderDetail'); }} />;
+      case 'proc_pick': return <Picking />;
+      case 'proc_pack': return <Packing />;
+      case 'proc_route': return <Routing />;
       
       // Đơn xuất
       case 'outbound_pending': return <ComingSoon title="Đơn chờ xuất" />;

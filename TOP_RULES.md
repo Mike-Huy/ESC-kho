@@ -30,5 +30,9 @@ Tệp này chứa các quy định bắt buộc mà AI Assistant (Antigravity) p
 - **Hình ảnh sản phẩm**: luôn lấy ảnh từ bucket của supabase, admmin có thể duyệt ảnh từ trong giao diện web, size tự co giãn để luôn thể hiện theo 1 chuẩn chung của toàn website
 - 
 
+## 6. Đơn hàng mua (PO) 
+- **Mã đơn hàng**: dù đang ở giao diện nào, menu nào, khi bấm vào mã đơn sẽ mở ra trang chi tiết PO
+-
+
 ---
 *Ghi chú cho AI: Bạn phải luôn kiểm tra tệp này trước khi thực hiện bất kỳ thay đổi nào để đảm bảo tính nhất quán của toàn bộ dự án.*

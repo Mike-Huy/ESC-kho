@@ -93,16 +93,19 @@ const InventoryReport: React.FC = () => {
           intransit_qty,
           available_qty,
           trans_date,
-          product!inner (
-            product_long,
-            unit,
-            sn_control,
-            brand
-          )
+            product!inner (
+              product_long,
+              unit,
+              sn_control,
+              brand,
+              website_id
+            )
         `, { count: 'exact' });
 
-      // Filter by website_id
-      query = query.eq('website_id', APP_CONFIG.WEBSITE_ID);
+      // Filter inventory records by website_id and check product visibility array
+      query = query
+        .eq('website_id', APP_CONFIG.WEBSITE_ID)
+        .filter('product.website_id', 'cs', `{${APP_CONFIG.WEBSITE_ID}}`);
 
       const { data, error, count } = await query
         .order('product_code', { ascending: true })

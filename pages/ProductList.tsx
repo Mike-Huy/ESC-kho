@@ -28,8 +28,8 @@ const ProductList: React.FC = () => {
         .from('product')
         .select('id, product_code, product_long, unit, sn_control, status, brand', { count: 'exact' });
 
-      // Filter by website_id property
-      query = query.eq('website_id', APP_CONFIG.WEBSITE_ID);
+      // Filter by website_id property (now an array)
+      query = query.contains('website_id', [APP_CONFIG.WEBSITE_ID]);
 
       const { data, error, count } = await query
         .order('product_code', { ascending: true })

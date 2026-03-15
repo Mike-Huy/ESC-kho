@@ -30,12 +30,14 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail }) => {
         .select(`
           *,
           so_items!inner(
-            product!inner(brand)
+            product!inner(brand, website_id)
           )
         `);
 
-      // Filter by website_id
-      query = query.eq('website_id', APP_CONFIG.WEBSITE_ID);
+      // Filter by website_id and product visibility
+      query = query
+        .eq('website_id', APP_CONFIG.WEBSITE_ID)
+        .filter('so_items.product.website_id', 'cs', `{${APP_CONFIG.WEBSITE_ID}}`);
 
       query = query.order('created_at', { ascending: false });
 
