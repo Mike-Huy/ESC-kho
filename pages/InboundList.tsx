@@ -30,10 +30,8 @@ const InboundList: React.FC<InboundListProps> = ({ onReceive, onNew }) => {
           total_amount
         `);
 
-      // Apply restriction if configured
-      if (APP_CONFIG.ALLOWED_SUPPLIERS && APP_CONFIG.ALLOWED_SUPPLIERS.length > 0) {
-        query = query.in('supplier_name', APP_CONFIG.ALLOWED_SUPPLIERS);
-      }
+      // Filter by website_id
+      query = query.eq('website_id', APP_CONFIG.WEBSITE_ID);
 
       const { data, error } = await query.order('order_date', { ascending: false });
 

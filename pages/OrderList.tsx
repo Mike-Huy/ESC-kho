@@ -34,10 +34,8 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail }) => {
           )
         `);
 
-      // Apply restriction if configured
-      if (APP_CONFIG.ALLOWED_BRANDS && APP_CONFIG.ALLOWED_BRANDS.length > 0) {
-        query = query.in('so_items.product.brand', APP_CONFIG.ALLOWED_BRANDS);
-      }
+      // Filter by website_id
+      query = query.eq('website_id', APP_CONFIG.WEBSITE_ID);
 
       query = query.order('created_at', { ascending: false });
 
