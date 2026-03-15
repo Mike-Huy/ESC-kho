@@ -27,7 +27,7 @@ export type PageType =
   // Cài đặt
   | 'set_staff' | 'set_salary' | 'set_permissions'
   // Nhân sự
-  | 'hr_staff_list' | 'hr_salary_level' | 'hr_shifts' | 'hr_policy';
+  | 'hr_staff_list' | 'hr_staff_profile' | 'hr_salary_level' | 'hr_shifts' | 'hr_policy';
 
 export interface NavItem {
   id: PageType | string;

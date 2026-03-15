@@ -290,7 +290,7 @@ const InventoryReport: React.FC = () => {
                     </tr>
                   ) : (
                     products.map((row, idx) => (
-                      <tr key={idx} className={`hover:bg-slate-50/80 transition-colors group ${row.alert ? 'bg-rose-50/20' : ''}`}>
+                      <tr key={idx} className={`hover:bg-primary/5 transition-colors group cursor-pointer ${row.alert ? 'bg-rose-50/30' : ''}`}>
                         <td className="px-6 py-2.5 font-mono text-xs text-primary font-bold">{formatValue(row.sku)}</td>
                         <td className="px-6 py-2.5 font-bold text-slate-700 text-[13px]">{formatValue(row.name)}</td>
                         <td className="px-6 py-2.5 text-center text-slate-500 text-xs font-semibold">{formatValue(row.unit)}</td>

@@ -12,7 +12,11 @@ interface StaffMember {
   status: string;
 }
 
-const StaffList: React.FC = () => {
+interface StaffListProps {
+  onViewStaff: (id: number) => void;
+}
+
+const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -171,6 +175,13 @@ const StaffList: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => onViewStaff(member.id)}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-primary hover:bg-primary/10 transition-all"
+                          title="Xem hồ sơ"
+                        >
+                          <span className="material-icons-round text-lg">contact_page</span>
+                        </button>
                         <button className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-white hover:text-primary hover:shadow-sm transition-all">
                           <span className="material-icons-round text-lg">edit</span>
                         </button>

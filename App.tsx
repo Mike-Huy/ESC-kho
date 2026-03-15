@@ -14,11 +14,13 @@ import TaskProgress from './pages/TaskProgress';
 import StaffCheckIn from './pages/StaffCheckIn';
 import StaffAdmin from './pages/StaffAdmin';
 import StaffList from './pages/StaffList';
+import StaffProfile from './pages/StaffProfile';
 import RoleManagement from './pages/RoleManagement';
 import BarcodeScanner from './pages/BarcodeScanner';
 
 const App: React.FC = () => {
   const [activePage, setActivePage] = useState<PageType>('dashboard');
+  const [selectedStaffId, setSelectedStaffId] = useState<number | null>(null);
   const [user, setUser] = useState<UserData | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -99,7 +101,8 @@ const App: React.FC = () => {
       case 'set_salary': return <ComingSoon title="Lương" />;
 
       // Nhân sự
-      case 'hr_staff_list': return <StaffList />;
+      case 'hr_staff_list': return <StaffList onViewStaff={(id) => { setSelectedStaffId(id); setActivePage('hr_staff_profile'); }} />;
+      case 'hr_staff_profile': return <StaffProfile staffId={selectedStaffId} onBack={() => setActivePage('hr_staff_list')} />;
       case 'hr_salary_level': return <ComingSoon title="Cấp bậc lương" />;
       case 'hr_shifts': return <ComingSoon title="Ca làm việc" />;
       case 'hr_policy': return <ComingSoon title="Chế độ" />;

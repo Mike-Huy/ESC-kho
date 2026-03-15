@@ -204,7 +204,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
                   className={`flex items-center justify-between gap-3 px-3 py-1.5 w-full rounded-lg transition-all duration-200 group ${
                     activePage === item.id || (hasChildren && item.children?.some(c => c.id === activePage))
                       ? 'bg-primary/10 text-primary'
-                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                      : 'text-slate-400 hover:text-white hover:bg-white/10'
                   }`}
                 >
                   <div className="flex items-center gap-3 text-[16px] font-bold">
@@ -226,18 +226,18 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
 
                 {hasChildren && (
                   <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                    <div className="ml-5 pl-4 border-l border-slate-800 space-y-0.5">
+                    <div className="ml-5 pl-4 border-l border-slate-800 space-y-0.5 mt-1 mb-1">
                       {item.children?.map(child => (
                         <button
                           key={child.id}
                           onClick={() => handlePageChange(child.id as PageType)}
                           className={`flex items-center gap-3 px-3 py-1.5 w-full rounded-md text-[15px] font-semibold transition-all ${
                             activePage === child.id 
-                              ? 'text-white' 
-                              : 'text-slate-500 hover:text-slate-300'
+                              ? 'bg-primary/20 text-white' 
+                              : 'text-slate-500 hover:text-white hover:bg-white/10'
                           }`}
                         >
-                          <span className={`material-icons-round text-[8px] ${activePage === child.id ? 'text-primary scale-125' : 'text-slate-700'}`}>circle</span>
+                          <span className={`material-icons-round text-[8px] ${activePage === child.id ? 'text-primary scale-125' : 'text-slate-700 group-hover:text-slate-500'}`}>circle</span>
                           {child.label}
                         </button>
                       ))}
@@ -333,7 +333,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
         </header>
         
         {/* Floating Action Buttons Area - Right Fixed */}
-        <div className="fixed right-6 top-1/2 -translate-y-1/2 z-[60] flex flex-col gap-4">
+        <div className="fixed right-6 bottom-10 z-[60] flex flex-col gap-4">
           <button 
             onClick={() => setActivePage('scanner')}
             className="group flex items-center justify-end gap-3 transition-all"
