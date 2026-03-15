@@ -104,11 +104,11 @@ const ProductList: React.FC = () => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 text-slate-400 text-[10px] uppercase tracking-widest font-extrabold border-b border-border-light">
-                    <th className="px-6 py-4">Mã SP</th>
-                    <th className="px-6 py-4">Tên Sản Phẩm</th>
-                    <th className="px-6 py-4">ĐVT</th>
-                    <th className="px-6 py-4 text-center">Quản lý S/N</th>
-                    <th className="px-6 py-4 text-center">Trạng thái</th>
+                    <th className="px-6 py-2">Mã SKU</th>
+                    <th className="px-6 py-2">Tên Sản Phẩm</th>
+                    <th className="px-6 py-2 text-center">ĐVT</th>
+                    <th className="px-6 py-2 text-center">Quản lý S/N</th>
+                    <th className="px-6 py-2 text-center">Trạng thái</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -117,7 +117,7 @@ const ProductList: React.FC = () => {
                       <td className="px-6 py-4 font-mono text-xs text-primary font-bold">
                         {product.product_code}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-2">
                         <div className="font-bold text-slate-700 text-[14px]">{product.product_long}</div>
                       </td>
                       <td className="px-6 py-4 text-slate-500 text-xs font-semibold">

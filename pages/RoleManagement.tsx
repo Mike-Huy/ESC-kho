@@ -154,8 +154,8 @@ const RoleManagement: React.FC = () => {
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Cấu hình Hệ thống & Phân quyền</h1>
           <p className="text-sm text-slate-500 mt-1">Quản lý chức năng xem, sửa, xóa dựa trên Vai trò người dùng</p>
         </div>
-        <button className="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-md transition-all">
-          <span className="material-icons-round text-sm">add_moderator</span> Tạo vai trò mới
+        <button className="bg-primary hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-md transition-all">
+          <span className="material-icons-round text-xs">add_moderator</span> Tạo vai trò mới
         </button>
       </div>
 
@@ -208,9 +208,9 @@ const RoleManagement: React.FC = () => {
                 <button 
                   onClick={savePermissions}
                   disabled={saving}
-                  className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white px-6 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5"
+                  className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-500/10 transition-all hover:-translate-y-0.5"
                 >
-                  <span className="material-icons-round text-sm">{saving ? 'sync' : 'save'}</span> 
+                  <span className="material-icons-round text-xs">{saving ? 'sync' : 'save'}</span> 
                   {saving ? 'Đang lưu...' : 'Lưu cấu hình'}
                 </button>
               )}
@@ -232,21 +232,21 @@ const RoleManagement: React.FC = () => {
                   <table className="w-full text-left">
                     <thead>
                       <tr className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                        <th className="pb-4 pl-4">Phân hệ (Module)</th>
-                        <th className="pb-4 text-center">Xem (Read)</th>
-                        <th className="pb-4 text-center">Thêm (Create)</th>
-                        <th className="pb-4 text-center">Sửa (Edit)</th>
-                        <th className="pb-4 text-center">Xóa (Delete)</th>
+                        <th className="py-2 pl-4">Phân hệ (Module)</th>
+                        <th className="py-2 text-center">Xem (Read)</th>
+                        <th className="py-2 text-center">Thêm (Create)</th>
+                        <th className="py-2 text-center">Sửa (Edit)</th>
+                        <th className="py-2 text-center">Xóa (Delete)</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                       {permissions.map((p) => (
                         <tr key={p.module} className="hover:bg-slate-50/50 transition-colors group">
-                          <td className="py-4 pl-4">
+                          <td className="py-2 pl-4">
                             <span className="text-sm font-bold text-slate-700">{modules.find(m => m.id === p.module)?.label}</span>
                           </td>
                           {['can_read', 'can_add', 'can_edit', 'can_delete'].map((field) => (
-                            <td key={field} className="py-4 text-center">
+                            <td key={field} className="py-2 text-center">
                               <button
                                 onClick={() => handleTogglePermission(p.module, field as keyof Permission)}
                                 className={`w-6 h-6 rounded-md border-2 transition-all flex items-center justify-center mx-auto ${

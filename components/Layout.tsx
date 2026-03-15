@@ -341,28 +341,28 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
         </header>
         
         {/* Floating Action Buttons Area - Right Fixed */}
-        <div className="fixed right-6 bottom-10 z-[60] flex flex-col gap-4">
+        <div className="fixed right-6 bottom-10 z-[60] flex flex-col gap-3">
           <button 
             onClick={() => setActivePage('scanner')}
-            className="group flex items-center justify-end gap-3 transition-all"
+            className="group flex items-center justify-end gap-2 transition-all"
           >
-            <span className="bg-white px-3 py-1.5 rounded-lg shadow-xl text-xs font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity border border-slate-100">
+            <span className="bg-white px-2 py-1 rounded-md shadow-lg text-[10px] font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity border border-slate-100">
               Quét mã vạch
             </span>
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl transition-all active:scale-90 ${activePage === 'scanner' ? 'bg-primary text-white scale-110 shadow-primary/30' : 'bg-white text-slate-600 hover:text-primary'}`}>
-              <span className="material-icons-round text-3xl">qr_code_scanner</span>
+            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shadow-xl transition-all active:scale-90 ${activePage === 'scanner' ? 'bg-primary text-white scale-105 shadow-primary/30' : 'bg-white text-slate-600 hover:text-primary'}`}>
+              <span className="material-icons-round text-xl">qr_code_scanner</span>
             </div>
           </button>
 
           <button 
             onClick={() => setActivePage('staffCheckIn')}
-            className="group flex items-center justify-end gap-3 transition-all"
+            className="group flex items-center justify-end gap-2 transition-all"
           >
-            <span className="bg-white px-3 py-1.5 rounded-lg shadow-xl text-xs font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity border border-slate-100">
+            <span className="bg-white px-2 py-1 rounded-md shadow-lg text-[10px] font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity border border-slate-100">
               Chấm công
             </span>
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl transition-all active:scale-90 ${activePage === 'staffCheckIn' ? 'bg-primary text-white scale-110 shadow-primary/30' : 'bg-white text-slate-600 hover:text-emerald-500'}`}>
-              <span className="material-icons-round text-3xl">fingerprint</span>
+            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shadow-xl transition-all active:scale-90 ${activePage === 'staffCheckIn' ? 'bg-primary text-white scale-105 shadow-primary/30' : 'bg-white text-slate-600 hover:text-emerald-500'}`}>
+              <span className="material-icons-round text-xl">fingerprint</span>
             </div>
           </button>
         </div>

@@ -220,8 +220,8 @@ const InventoryReport: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-semibold shadow-sm">
-            <span className="material-icons-round text-sm">file_download</span>
+          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-blue-700 text-white rounded-lg transition-colors text-xs font-semibold shadow-sm">
+            <span className="material-icons-round text-xs">file_download</span>
             Xuất ra Excel
           </button>
           <button className="p-2 border border-border-light bg-white rounded-lg text-slate-500 hover:text-primary transition-colors shadow-sm">
@@ -308,13 +308,13 @@ const InventoryReport: React.FC = () => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 text-table-header text-[10px] uppercase tracking-widest font-extrabold">
-                    <th className="px-6 py-3 border-b border-border-light">Mã SKU</th>
-                    <th className="px-6 py-3 border-b border-border-light">Tên Sản Phẩm</th>
-                    <th className="px-6 py-3 border-b border-border-light text-center">ĐVT</th>
-                    <th className="px-6 py-3 border-b border-border-light text-right">Tồn đầu</th>
-                    <th className="px-6 py-3 border-b border-border-light text-right text-emerald-700">Tổng Nhập</th>
-                    <th className="px-6 py-3 border-b border-border-light text-right text-rose-700">Tổng Xuất</th>
-                    <th className="px-6 py-3 border-b border-border-light text-right text-primary bg-primary/5">Tồn cuối</th>
+                    <th className="px-6 py-1.5 border-b border-border-light">Mã SKU</th>
+                    <th className="px-6 py-1.5 border-b border-border-light">Tên Sản Phẩm</th>
+                    <th className="px-6 py-1.5 border-b border-border-light text-center">ĐVT</th>
+                    <th className="px-6 py-1.5 border-b border-border-light text-right">Tồn đầu</th>
+                    <th className="px-6 py-1.5 border-b border-border-light text-right text-emerald-700">Tổng Nhập</th>
+                    <th className="px-6 py-1.5 border-b border-border-light text-right text-rose-700">Tổng Xuất</th>
+                    <th className="px-6 py-1.5 border-b border-border-light text-right text-primary bg-primary/5">Tồn cuối</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm divide-y divide-slate-100">
@@ -327,7 +327,7 @@ const InventoryReport: React.FC = () => {
                   ) : (
                     products.map((row, idx) => (
                       <tr key={idx} className={`hover:bg-primary/5 transition-colors group cursor-pointer ${row.alert ? 'bg-rose-50/30' : ''}`}>
-                        <td className="px-6 py-2.5 font-mono text-xs text-primary font-bold">
+                        <td className="px-6 py-1.5 font-mono text-xs text-primary font-bold">
                           <div className="flex items-center gap-2">
                             {row.sn_control && (
                               <span className="material-icons-round text-primary text-[14px]" title="Có quản lý S/N">qr_code</span>
@@ -335,12 +335,12 @@ const InventoryReport: React.FC = () => {
                             {formatValue(row.sku)}
                           </div>
                         </td>
-                        <td className="px-6 py-2.5 font-bold text-slate-700 text-[13px]">{formatValue(row.name)}</td>
-                        <td className="px-6 py-2.5 text-center text-slate-500 text-xs font-semibold">{formatValue(row.unit)}</td>
-                        <td className="px-6 py-2.5 text-right font-bold text-slate-600">{formatNumber(row.start)}</td>
-                        <td className="px-6 py-2.5 text-right font-bold text-emerald-600">{row.in > 0 ? `+${formatNumber(row.in)}` : '0'}</td>
-                        <td className="px-6 py-2.5 text-right font-bold text-rose-600">{row.out > 0 ? `-${formatNumber(row.out)}` : '0'}</td>
-                        <td className={`px-6 py-2.5 text-right font-extrabold ${row.alert ? 'text-rose-600' : 'text-primary bg-primary/5'}`}>
+                        <td className="px-6 py-1.5 font-bold text-slate-700 text-[13px]">{formatValue(row.name)}</td>
+                        <td className="px-6 py-1.5 text-center text-slate-500 text-xs font-semibold">{formatValue(row.unit)}</td>
+                        <td className="px-6 py-1.5 text-right font-bold text-slate-600">{formatNumber(row.start)}</td>
+                        <td className="px-6 py-1.5 text-right font-bold text-emerald-600">{row.in > 0 ? `+${formatNumber(row.in)}` : '0'}</td>
+                        <td className="px-6 py-1.5 text-right font-bold text-rose-600">{row.out > 0 ? `-${formatNumber(row.out)}` : '0'}</td>
+                        <td className={`px-6 py-1.5 text-right font-extrabold ${row.alert ? 'text-rose-600' : 'text-primary bg-primary/5'}`}>
                           <div className="flex items-center justify-end gap-2">
                             {formatNumber(row.end)}
                             {row.sn_control && (

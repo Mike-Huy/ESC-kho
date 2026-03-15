@@ -47,8 +47,8 @@ const WarehouseLocation: React.FC = () => {
           <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase">QUẢN LÝ KHO & VỊ TRÍ</h1>
           <p className="text-slate-500 text-sm font-bold uppercase tracking-widest mt-1">Thiết lập cấu trúc kho hàng và ô kệ chi tiết</p>
         </div>
-        <button className="bg-primary text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary/90 transition-all shadow-xl shadow-primary/20 flex items-center gap-2">
-          <span className="material-icons-round text-lg">add</span>
+        <button className="bg-primary text-white px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider hover:bg-primary/90 transition-all shadow-lg shadow-primary/10 flex items-center gap-1.5">
+          <span className="material-icons-round text-sm">add</span>
           THÊM MỚI {activeTab === 'warehouse' ? 'KHO' : 'VỊ TRÍ'}
         </button>
       </header>
@@ -85,18 +85,18 @@ const WarehouseLocation: React.FC = () => {
                 <tr className="bg-slate-50/50 border-b border-slate-100">
                   {activeTab === 'warehouse' ? (
                     <>
-                      <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mã Kho</th>
-                      <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tên Kho</th>
-                      <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Địa Chỉ</th>
-                      <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Thao Tác</th>
+                      <th className="px-8 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mã Kho</th>
+                      <th className="px-8 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tên Kho</th>
+                      <th className="px-8 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Địa Chỉ</th>
+                      <th className="px-8 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Thao Tác</th>
                     </>
                   ) : (
                     <>
-                      <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mã Vị Trí</th>
-                      <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tên Vị Trí</th>
-                      <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tầng</th>
-                      <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Kích Thước (cm)</th>
-                      <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Thao Tác</th>
+                      <th className="px-8 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mã Vị Trí</th>
+                      <th className="px-8 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tên Vị Trí</th>
+                      <th className="px-8 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tầng</th>
+                      <th className="px-8 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Kích Thước (cm)</th>
+                      <th className="px-8 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Thao Tác</th>
                     </>
                   )}
                 </tr>
@@ -105,13 +105,13 @@ const WarehouseLocation: React.FC = () => {
                 {activeTab === 'warehouse' ? (
                   warehouses.map((wh) => (
                     <tr key={wh.id} className="hover:bg-slate-50/50 transition-colors group">
-                      <td className="px-8 py-4">
+                      <td className="px-8 py-2">
                         <span className="text-xs font-black text-primary bg-primary/5 px-2 py-1 rounded-lg uppercase">{wh.wh_code}</span>
                       </td>
-                      <td className="px-8 py-4">
+                      <td className="px-8 py-2">
                         <p className="text-sm font-black text-slate-700 uppercase">{wh.wh_name}</p>
                       </td>
-                      <td className="px-8 py-4">
+                      <td className="px-8 py-2">
                         <p className="text-xs font-bold text-slate-500">{wh.wh_address || '---'}</p>
                       </td>
                       <td className="px-8 py-4 text-right">
@@ -124,16 +124,16 @@ const WarehouseLocation: React.FC = () => {
                 ) : (
                   locations.map((loc) => (
                     <tr key={loc.id} className="hover:bg-slate-50/50 transition-colors group">
-                      <td className="px-8 py-4">
+                      <td className="px-8 py-2">
                         <span className="text-xs font-black text-slate-900 uppercase">{loc.location_code}</span>
                       </td>
-                      <td className="px-8 py-4">
+                      <td className="px-8 py-2">
                         <p className="text-sm font-black text-slate-700 uppercase">{loc.location_name}</p>
                       </td>
-                      <td className="px-8 py-4">
+                      <td className="px-8 py-2">
                         <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded uppercase">{loc.location_upper || '---'}</span>
                       </td>
-                      <td className="px-8 py-4">
+                      <td className="px-8 py-2">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
                           {loc.location_length_cm}x{loc.location_width_cm}x{loc.location_height_cm}
                         </p>

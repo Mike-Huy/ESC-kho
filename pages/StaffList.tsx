@@ -166,9 +166,9 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
             </button>
             <button 
               onClick={() => setIsAddModalOpen(true)}
-              className="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-md transition-all active:scale-95"
+              className="bg-primary hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-md transition-all active:scale-95"
             >
-                <span className="material-icons-round text-sm">person_add</span> Thêm nhân viên
+                <span className="material-icons-round text-xs">person_add</span> Thêm nhân viên
             </button>
         </div>
       </div>
@@ -203,18 +203,18 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-xs font-bold uppercase text-slate-500">
-                  <th className="px-6 py-4">Nhân viên</th>
-                  <th className="px-6 py-4">Số điện thoại</th>
-                  <th className="px-6 py-4">Phòng ban</th>
-                  <th className="px-6 py-4">Chức vụ</th>
-                  <th className="px-6 py-4">Trạng thái</th>
-                  <th className="px-6 py-4 text-right">Thao tác</th>
+                  <th className="px-6 py-2">Nhân viên</th>
+                  <th className="px-6 py-2">Số điện thoại</th>
+                  <th className="px-6 py-2">Phòng ban</th>
+                  <th className="px-6 py-2">Chức vụ</th>
+                  <th className="px-6 py-2">Trạng thái</th>
+                  <th className="px-6 py-2 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {staff.map((member) => (
                   <tr key={member.id} className="hover:bg-blue-50/30 transition-colors group">
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-1.5">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-slate-100 rounded-xl overflow-hidden border border-slate-200 flex-shrink-0 flex items-center justify-center shadow-sm">
                           {member.avatar ? (
@@ -229,21 +229,21 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-1.5">
                       <div className="flex items-center gap-2">
                         <span className="material-icons-round text-xs text-slate-400">phone</span>
                         <span className="text-sm text-slate-600 font-medium">{member.phone}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-1.5">
                       <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-blue-50 text-blue-700 inline-block border border-blue-100">
                         {member.department}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-1.5">
                       <span className="text-sm text-slate-600 font-semibold">{member.position}</span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-1.5">
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
                         <span className="text-xs font-bold text-emerald-600">{member.status}</span>

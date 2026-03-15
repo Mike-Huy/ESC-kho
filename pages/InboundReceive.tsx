@@ -122,7 +122,7 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
   const handleScan = async (e: React.FormEvent) => {
     e.preventDefault();
     const value = scanValue.trim();
-    if (!value) return;
+    if (!value || poInfo?.status === 'received') return;
 
     let productCode = value;
     let serialNumber: string | null = null;
@@ -188,8 +188,9 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
     setScanValue('');
   };
 
-  const updateNonSNQty = (idx: number, qtyStr: string) => {
-    const qty = parseInt(qtyStr) || 0;
+  const updateNonSNQty = (idx: number, val: string) => {
+    if (poInfo?.status === 'received') return;
+    const qty = parseInt(val) || 0;
     if (qty > items[idx].ordered_qty) {
       alert(`Không được vượt quá ${items[idx].ordered_qty}`);
       return;
@@ -200,15 +201,16 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
   };
 
   const addManualSN = (idx: number, sn: string) => {
-    const trimmed = sn.trim();
-    if (!trimmed) return;
+    if (poInfo?.status === 'received') return;
+    const val = sn.trim();
+    if (!val) return;
     
-    if (items[idx].scanned_serials.includes(trimmed)) {
+    if (items[idx].scanned_serials.includes(val)) {
       alert('Số Serial này đã được gán!');
       return;
     }
 
-    const updatedSerials = [...items[idx].scanned_serials, trimmed];
+    const updatedSerials = [...items[idx].scanned_serials, val];
     const newItems = [...items];
     newItems[idx] = {
       ...items[idx],
@@ -301,13 +303,19 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">NHẬN HÀNG ĐƠN #{poCode}</h1>
         </div>
         <div className="flex items-center gap-3">
-           <button 
-             onClick={handleConfirmReceive}
-             disabled={receiving}
-             className="bg-emerald-600 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-[0.1em] hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100 disabled:opacity-50"
-           >
-             {receiving ? 'ĐANG LƯU...' : 'XÁC NHẬN NHẬP KHO'}
-           </button>
+            {poInfo?.status === 'received' ? (
+              <span className="bg-slate-100 text-slate-400 px-4 py-2 rounded-lg font-black text-[10px] uppercase tracking-wider border border-slate-200">
+                ĐƠN HÀNG ĐÃ NHẬN
+              </span>
+            ) : (
+               <button 
+                 onClick={handleConfirmReceive}
+                 disabled={receiving}
+                 className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-black text-[10px] uppercase tracking-wider hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 disabled:opacity-50"
+               >
+                 {receiving ? 'ĐANG LƯU...' : 'XÁC NHẬN NHẬP KHO'}
+               </button>
+            )}
         </div>
       </header>
 
@@ -320,12 +328,13 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
                <label className="text-primary text-[10px] font-black uppercase tracking-[0.2em] mb-4 block">TRẠM QUÉT NHẬN HÀNG</label>
                <form onSubmit={handleScan} className="relative">
                   <span className="material-icons-round absolute left-6 top-1/2 -translate-y-1/2 text-primary/40 text-3xl">qr_code_scanner</span>
-                  <input 
+                   <input 
                     autoFocus
-                    placeholder="Quét mã QR sản phẩm hoặc S/N..."
+                    placeholder={poInfo?.status === 'received' ? "Đơn hàng đã nhận - Không thể quét thêm" : "Quét mã QR sản phẩm hoặc S/N..."}
                     value={scanValue}
                     onChange={(e) => setScanValue(e.target.value)}
-                    className="w-full bg-white/5 border-2 border-white/10 rounded-3xl pl-16 pr-6 py-6 text-2xl font-black text-white outline-none focus:border-primary/50 focus:bg-white/10 transition-all"
+                    disabled={poInfo?.status === 'received'}
+                    className={`w-full bg-white/5 border-2 border-white/10 rounded-3xl pl-16 pr-6 py-6 text-2xl font-black text-white outline-none transition-all ${poInfo?.status === 'received' ? 'opacity-50 cursor-not-allowed' : 'focus:border-primary/50 focus:bg-white/10'}`}
                   />
                   <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-2">
                      <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full font-black uppercase tracking-tighter border border-emerald-500/30 anim-pulse">READY</span>
@@ -358,18 +367,20 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
                                {item.scanned_serials.map((sn, sIdx) => (
                                  <div key={sIdx} className="group flex items-center gap-1.5 text-[11px] font-mono font-black text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 shadow-sm transition-all hover:bg-slate-200">
                                    {sn}
-                                   <button 
-                                     onClick={(e) => {
-                                       e.stopPropagation();
-                                       const updatedSerials = item.scanned_serials.filter((_, i) => i !== sIdx);
-                                       const newItems = [...items];
-                                       newItems[idx] = { ...item, scanned_serials: updatedSerials, received_qty: updatedSerials.length };
-                                       setItems(newItems);
-                                     }}
-                                     className="text-slate-400 hover:text-red-500 transition-colors"
-                                   >
-                                     <span className="material-icons-round text-[12px]">close</span>
-                                   </button>
+                                    {poInfo?.status !== 'received' && (
+                                     <button 
+                                       onClick={(e) => {
+                                         e.stopPropagation();
+                                         const updatedSerials = item.scanned_serials.filter((_, i) => i !== sIdx);
+                                         const newItems = [...items];
+                                         newItems[idx] = { ...item, scanned_serials: updatedSerials, received_qty: updatedSerials.length };
+                                         setItems(newItems);
+                                       }}
+                                       className="text-slate-400 hover:text-red-500 transition-colors"
+                                     >
+                                       <span className="material-icons-round text-[12px]">close</span>
+                                     </button>
+                                   )}
                                  </div>
                                ))}
 
@@ -390,7 +401,8 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
                                    max={item.ordered_qty}
                                    value={item.received_qty}
                                    onChange={(e) => updateNonSNQty(idx, e.target.value)}
-                                   className="w-16 bg-slate-50 border-2 border-slate-100 rounded-lg px-2 py-0.5 text-center font-black text-slate-900 focus:border-primary outline-none"
+                                   readOnly={poInfo?.status === 'received'}
+                                   className={`w-16 bg-slate-50 border-2 border-slate-100 rounded-lg px-2 py-0.5 text-center font-black text-slate-900 outline-none ${poInfo?.status === 'received' ? 'opacity-50' : 'focus:border-primary'}`}
                                  />
                                ) : (
                                  <span className="text-xl font-black text-slate-900">
@@ -423,14 +435,18 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
                                 Nhập số Serial còn thiếu
                               </span>
                            </div>
-                           <button 
-                             onClick={() => setActiveItemIdx(activeItemIdx === idx ? null : idx)}
-                             className={`text-[10px] font-black uppercase px-3 py-1 rounded-lg transition-all ${
-                               activeItemIdx === idx ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105' : 'text-primary hover:bg-primary/5 border border-primary/10'
-                             }`}
-                           >
-                             {activeItemIdx === idx ? 'Đang nhập...' : '+ NHẬP THỦ CÔNG'}
-                           </button>
+                            {poInfo?.status !== 'received' ? (
+                              <button 
+                                onClick={() => setActiveItemIdx(activeItemIdx === idx ? null : idx)}
+                                className={`text-[10px] font-black uppercase px-3 py-1 rounded-lg transition-all ${
+                                  activeItemIdx === idx ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105' : 'text-primary hover:bg-primary/5 border border-primary/10'
+                                }`}
+                              >
+                                {activeItemIdx === idx ? 'Đang nhập...' : '+ NHẬP THỦ CÔNG'}
+                              </button>
+                            ) : (
+                              <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest italic">Chỉ xem</span>
+                            )}
                         </div>
                         
                         {activeItemIdx === idx && (

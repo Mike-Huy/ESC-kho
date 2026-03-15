@@ -76,9 +76,9 @@ const InboundList: React.FC<InboundListProps> = ({ onReceive, onNew }) => {
         </div>
         <button 
           onClick={onNew}
-          className="bg-primary text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-primary/20"
+          className="bg-primary text-white px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-blue-700 transition-all shadow-md shadow-primary/10"
         >
-          <span className="material-icons-round">add</span>
+          <span className="material-icons-round text-sm">add</span>
           TẠO ĐƠN MỚI
         </button>
       </header>
@@ -105,12 +105,12 @@ const InboundList: React.FC<InboundListProps> = ({ onReceive, onNew }) => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50">
-                <th className="px-8 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mã Đơn Nhập</th>
-                <th className="px-8 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nhà Cung Cấp</th>
-                <th className="px-8 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ngày Đặt</th>
-                <th className="px-8 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Giá Trị</th>
-                <th className="px-8 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Trạng Thái</th>
-                <th className="px-8 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Thao Tác</th>
+                <th className="px-8 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mã Đơn Nhập</th>
+                <th className="px-8 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nhà Cung Cấp</th>
+                <th className="px-8 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ngày Đặt</th>
+                <th className="px-8 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Giá Trị</th>
+                <th className="px-8 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Trạng Thái</th>
+                <th className="px-8 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Thao Tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -127,7 +127,7 @@ const InboundList: React.FC<InboundListProps> = ({ onReceive, onNew }) => {
               ) : (
                 filteredPos.map((po) => (
                   <tr key={po.id} className="group hover:bg-slate-50/80 transition-all">
-                    <td className="px-8 py-3">
+                    <td className="px-8 py-1.5">
                        <button 
                          onClick={() => onReceive(po.po_code)}
                          className="font-mono font-black text-primary bg-primary/5 px-3 py-1.5 rounded-lg border border-primary/10 hover:bg-primary hover:text-white transition-all scale-95 active:scale-90"
@@ -135,13 +135,13 @@ const InboundList: React.FC<InboundListProps> = ({ onReceive, onNew }) => {
                          {po.po_code}
                        </button>
                     </td>
-                    <td className="px-8 py-3">
+                    <td className="px-8 py-1.5">
                        <div className="font-bold text-slate-800 uppercase tracking-tighter">{po.supplier_name}</div>
                     </td>
-                    <td className="px-8 py-3">
+                    <td className="px-8 py-1.5">
                        <div className="text-sm font-bold text-slate-600">{new Date(po.order_date).toLocaleDateString('vi-VN')}</div>
                     </td>
-                    <td className="px-8 py-3">
+                    <td className="px-8 py-1.5">
                        <div className="text-sm font-black text-slate-900">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(po.total_amount || 0)}</div>
                     </td>
                     <td className="px-8 py-3 text-center">
