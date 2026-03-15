@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Order } from '../types';
 import { supabase } from '../supabaseClient';
+import { APP_CONFIG } from '../appConfig';
 
 interface OrderListProps {
   onViewDetail: (id: string) => void;
@@ -26,8 +27,19 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail }) => {
       // Table is named 'so' (Sales Orders)
       let query = supabase
         .from('so')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select(`
+          *,
+          so_items!inner(
+            product!inner(brand)
+          )
+        `);
+
+      // Apply restriction if configured
+      if (APP_CONFIG.ALLOWED_BRANDS && APP_CONFIG.ALLOWED_BRANDS.length > 0) {
+        query = query.in('so_items.product.brand', APP_CONFIG.ALLOWED_BRANDS);
+      }
+
+      query = query.order('created_at', { ascending: false });
 
       if (searchTerm) {
         query = query.or(`so_code.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%`);

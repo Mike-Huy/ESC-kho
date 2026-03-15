@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
+import { APP_CONFIG } from '../appConfig';
 
 interface InventoryItem {
   sku: string;
@@ -80,9 +81,8 @@ const InventoryReport: React.FC = () => {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
 
-      // Lấy dữ liệu từ bảng inventory của Supabase
-      // Kết hợp với bảng product để lấy tên sản phẩm và ĐVT (unit)
-      const { data, error, count } = await supabase
+      // Build query with optional brand filtering
+      let query = supabase
         .from('inventory')
         .select(`
           id,
@@ -93,12 +93,19 @@ const InventoryReport: React.FC = () => {
           intransit_qty,
           available_qty,
           trans_date,
-          product:product_code (
+          product!inner (
             product_long,
             unit,
-            sn_control
+            sn_control,
+            brand
           )
-        `, { count: 'exact' })
+        `, { count: 'exact' });
+
+      if (APP_CONFIG.ALLOWED_BRANDS && APP_CONFIG.ALLOWED_BRANDS.length > 0) {
+        query = query.in('product.brand', APP_CONFIG.ALLOWED_BRANDS);
+      }
+
+      const { data, error, count } = await query
         .order('product_code', { ascending: true })
         .range(from, to);
 

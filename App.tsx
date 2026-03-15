@@ -19,11 +19,14 @@ import RoleManagement from './pages/RoleManagement';
 import BarcodeScanner from './pages/BarcodeScanner';
 import ProductList from './pages/ProductList';
 import InboundNew from './pages/InboundNew';
+import InboundList from './pages/InboundList';
+import InboundReceive from './pages/InboundReceive';
 
 const App: React.FC = () => {
   const [activePage, setActivePage] = useState<PageType>('dashboard');
   const [selectedStaffId, setSelectedStaffId] = useState<number | null>(null);
   const [selectedOrderCode, setSelectedOrderCode] = useState<string | null>(null);
+  const [selectedPOCode, setSelectedPOCode] = useState<string | null>(null);
   const [user, setUser] = useState<UserData | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -58,6 +61,8 @@ const App: React.FC = () => {
       
       // Đơn nhập
       case 'inbound_new': return <InboundNew />;
+      case 'inbound_list': return <InboundList onReceive={(code) => { setSelectedPOCode(code); setActivePage('inbound_receive'); }} onNew={() => setActivePage('inbound_new')} />;
+      case 'inbound_receive': return <InboundReceive poCode={selectedPOCode || ''} onBack={() => setActivePage('inbound_list')} />;
       case 'inbound_return': return <ComingSoon title="Hàng trả" />;
       case 'inbound_internal': return <ComingSoon title="Xử lý nội bộ" />;
       

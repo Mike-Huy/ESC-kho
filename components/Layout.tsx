@@ -10,6 +10,8 @@ export interface UserData {
   allowedModules: string[];
 }
 
+import { APP_CONFIG } from '../appConfig';
+
 interface LayoutProps {
   children: React.ReactNode;
   activePage: PageType;
@@ -22,7 +24,8 @@ const navItems: NavItem[] = [
   { 
     id: 'grp_inbound', label: '1. Đơn nhập', icon: 'login',
     children: [
-      { id: 'inbound_new', label: 'Hàng mới', icon: 'add_shopping_cart' },
+      { id: 'inbound_new', label: 'Tạo hàng mới', icon: 'add_shopping_cart' },
+      { id: 'inbound_list', label: 'Danh sách đơn', icon: 'list_alt' },
       { id: 'inbound_return', label: 'Hàng trả', icon: 'settings_backup_restore' },
       { id: 'inbound_internal', label: 'Xử lý nội bộ', icon: 'sync_alt' },
     ]
@@ -181,8 +184,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
               <img src="/logo-kho-hang-sg.jpg" alt="Logo" className="w-full h-full object-cover" />
             </div>
             <div className="flex-1">
-              <span className="font-extrabold text-[19px] tracking-tight text-white block leading-tight">KHO SÀI GÒN</span>
-              <span className="text-[11px] text-primary/80 font-bold uppercase tracking-widest">WMS System</span>
+              <span className="font-extrabold text-[19px] tracking-tight text-white block leading-tight">
+                {APP_CONFIG.INSTANCE_NAME.split(' - ')[0]}
+              </span>
+              <span className="text-[11px] text-primary/80 font-bold uppercase tracking-widest">
+                {APP_CONFIG.INSTANCE_NAME.split(' - ')[1] || 'WMS System'}
+              </span>
             </div>
           </button>
         </div>

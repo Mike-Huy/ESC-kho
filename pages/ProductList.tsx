@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
+import { APP_CONFIG } from '../appConfig';
 
 interface Product {
   id: number;
@@ -23,9 +24,16 @@ const ProductList: React.FC = () => {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
 
-      const { data, error, count } = await supabase
+      let query = supabase
         .from('product')
-        .select('id, product_code, product_long, unit, sn_control, status', { count: 'exact' })
+        .select('id, product_code, product_long, unit, sn_control, status, brand', { count: 'exact' });
+
+      // Apply restriction if configured
+      if (APP_CONFIG.ALLOWED_BRANDS && APP_CONFIG.ALLOWED_BRANDS.length > 0) {
+        query = query.in('brand', APP_CONFIG.ALLOWED_BRANDS);
+      }
+
+      const { data, error, count } = await query
         .order('product_code', { ascending: true })
         .range(from, to);
 

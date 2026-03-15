@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { APP_CONFIG } from '../appConfig';
 
 interface Product {
   product_code: string;
@@ -19,7 +20,7 @@ interface InboundItem {
 
 const InboundNew: React.FC = () => {
   const [poCode, setPoCode] = useState(`PO-${new Date().getTime().toString().slice(-6)}`);
-  const [supplier, setSupplier] = useState('');
+  const [supplier, setSupplier] = useState(APP_CONFIG.ALLOWED_SUPPLIERS?.[0] || '');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [items, setItems] = useState<InboundItem[]>([]);

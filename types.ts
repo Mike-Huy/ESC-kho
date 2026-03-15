@@ -11,7 +11,7 @@ export type PageType =
   | 'taskProgress'
   | 'putAway'
   // Đơn nhập
-  | 'inbound_new' | 'inbound_return' | 'inbound_internal'
+  | 'inbound_new' | 'inbound_list' | 'inbound_receive' | 'inbound_return' | 'inbound_internal'
   // Xử lý đơn
   | 'proc_list' | 'proc_pick' | 'proc_pack' | 'proc_route'
   // Đơn xuất
