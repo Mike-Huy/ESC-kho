@@ -232,22 +232,35 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
                 </button>
 
                 {hasChildren && (
-                  <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                    <div className="ml-5 pl-4 border-l border-slate-800 space-y-0.5 mt-1 mb-1">
-                      {item.children?.map(child => (
-                        <button
-                          key={child.id}
-                          onClick={() => handlePageChange(child.id as PageType)}
-                          className={`flex items-center gap-3 px-3 py-1.5 w-full rounded-md text-[15px] font-semibold transition-all ${
-                            activePage === child.id 
-                              ? 'bg-primary/20 text-white' 
-                              : 'text-slate-500 hover:text-white hover:bg-white/10'
-                          }`}
-                        >
-                          <span className={`material-icons-round text-[8px] ${activePage === child.id ? 'text-primary scale-125' : 'text-slate-700 group-hover:text-slate-500'}`}>circle</span>
-                          {child.label}
-                        </button>
-                      ))}
+                  <div 
+                    className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                      isExpanded 
+                        ? 'max-h-[500px] opacity-100 visible mt-1 mb-1' 
+                        : 'max-h-0 opacity-0 invisible'
+                    }`}
+                  >
+                    <div className="ml-5 pl-4 border-l border-slate-800 space-y-0.5">
+                      {item.children?.map(child => {
+                        const isChildActive = activePage === child.id;
+                        return (
+                          <button
+                            key={child.id}
+                            onClick={() => handlePageChange(child.id as PageType)}
+                            className={`flex items-center gap-3 px-3 py-1.5 w-full rounded-md text-[15px] font-semibold transition-all group/sub ${
+                              isChildActive 
+                                ? 'bg-primary/20 text-white' 
+                                : 'text-slate-500 hover:text-white hover:bg-white/10'
+                            }`}
+                          >
+                            <span className={`material-icons-round text-[8px] transition-transform duration-300 ${
+                              isChildActive ? 'text-primary scale-150' : 'text-slate-700 group-hover/sub:text-slate-400'
+                            }`}>
+                              circle
+                            </span>
+                            <span className="truncate">{child.label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
