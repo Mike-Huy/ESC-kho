@@ -19,7 +19,15 @@ interface InboundItem {
 }
 
 const InboundNew: React.FC = () => {
-  const [poCode, setPoCode] = useState(`PO-${new Date().getTime().toString().slice(-6)}`);
+  const generatePoCode = () => {
+    const now = new Date();
+    const yy = now.getFullYear().toString().slice(-2);
+    const mm = (now.getMonth() + 1).toString().padStart(2, '0');
+    const dd = now.getDate().toString().padStart(2, '0');
+    const rand = Math.floor(Math.random() * 9000 + 1000);
+    return `PO-${yy}${mm}${dd}-${rand}`;
+  };
+  const [poCode, setPoCode] = useState(generatePoCode);
   const [supplier, setSupplier] = useState(APP_CONFIG.ALLOWED_SUPPLIERS?.[0] || '');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Product[]>([]);
@@ -27,6 +35,39 @@ const InboundNew: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showSNInput, setShowSNInput] = useState<number | null>(null);
   const [tempSN, setTempSN] = useState('');
+  const [suppliersList, setSuppliersList] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetchSuppliers();
+  }, []);
+
+  const fetchSuppliers = async () => {
+    try {
+      // Fetch distinct supplier names from po table
+      const { data, error } = await supabase
+        .from('po')
+        .select('supplier_name')
+        .contains('website_id', [APP_CONFIG.WEBSITE_ID]);
+      
+      if (error) throw error;
+      
+      if (data) {
+        // Filter unique names and remove empty ones
+        const uniqueSuppliers = Array.from(new Set(data.map(item => item.supplier_name)))
+          .filter(name => !!name)
+          .sort() as string[];
+        
+        setSuppliersList(uniqueSuppliers);
+        
+        // If current supplier is empty and we have results, set first one as default
+        if (!supplier && uniqueSuppliers.length > 0) {
+          setSupplier(uniqueSuppliers[0]);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching suppliers:', err);
+    }
+  };
 
   const searchProducts = async (q: string) => {
     if (!q) {
@@ -158,7 +199,7 @@ const InboundNew: React.FC = () => {
 
       alert('Tạo đơn nhập thành công!');
       // Reset form
-      setPoCode(`PO-${new Date().getTime().toString().slice(-6)}`);
+      setPoCode(generatePoCode());
       setSupplier('');
       setItems([]);
       
@@ -202,12 +243,21 @@ const InboundNew: React.FC = () => {
             </div>
             <div>
               <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Nhà Cung Cấp</label>
-              <input 
-                placeholder="Nhập tên nhà cung cấp..."
-                value={supplier}
-                onChange={(e) => setSupplier(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-primary/20"
-              />
+              <div className="relative">
+                <select 
+                  value={supplier}
+                  onChange={(e) => setSupplier(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-primary/20 appearance-none"
+                >
+                  <option value="" disabled>-- Chọn nhà cung cấp --</option>
+                  {suppliersList.map((s, i) => (
+                    <option key={i} value={s}>{s}</option>
+                  ))}
+                  {suppliersList.length === 0 && <option value="MM An Phú">MM An Phú (Mặc định)</option>}
+                </select>
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 material-icons-round text-slate-400 pointer-events-none">expand_more</span>
+              </div>
+              <p className="mt-1 text-[10px] text-slate-400 font-medium italic">* Danh sách được lấy từ các đơn hàng trước đó</p>
             </div>
           </div>
 
