@@ -144,9 +144,22 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
     };
     
     const requiredModule = moduleMapping[item.id as string];
-    if (!requiredModule) return true;
+    if (!requiredModule) return true; // Show items with no mapping by default
     
-    return user.allowedModules.includes(requiredModule);
+    // Robust check for allowedModules
+    const allowedModules = user.allowedModules;
+    if (!allowedModules) return false;
+    
+    // If it's a string (e.g. from legacy data), check inclusion. If array, check inclusion.
+    if (Array.isArray(allowedModules)) {
+      return allowedModules.includes(requiredModule);
+    }
+    
+    if (typeof allowedModules === 'string') {
+      return (allowedModules as string).includes(requiredModule);
+    }
+    
+    return false;
   });
 
   // Special full-screen layout for mobile check-in
