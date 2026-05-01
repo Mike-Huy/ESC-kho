@@ -140,10 +140,10 @@ const StaffCheckIn: React.FC<StaffCheckInProps> = ({ onExit, user }) => {
         <header className="relative z-10 p-6 flex justify-between items-center border-b border-slate-100 bg-white">
           <div className="flex items-center gap-3 cursor-pointer" onClick={onExit}>
              <div className="w-10 h-10 rounded-xl overflow-hidden shadow-md">
-                <img src="/logo-kho-hang-sg.jpg" alt="Logo" className="w-full h-full object-cover" />
+                <img src="/ESC__logo-01.jpg" alt="Logo" className="w-full h-full object-cover" />
              </div>
              <div>
-                <h1 className="text-sm font-black uppercase text-primary tracking-tight">KHO SÀI GÒN</h1>
+                <h1 className="text-sm font-black uppercase text-primary tracking-tight">KHO ESC</h1>
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">HỆ THỐNG WMS</p>
              </div>
           </div>

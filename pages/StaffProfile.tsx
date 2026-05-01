@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
-import { PageType } from '../types';
 
 interface StaffProfileProps {
   staffId: number | null;

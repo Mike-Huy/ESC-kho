@@ -206,7 +206,6 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
   };
 
   const handleEditClick = (member: StaffMember) => {
-    const originalItem = staff.find(s => s.id === member.id);
     const dept = departments.find(d => d.name === member.department);
     
     setNewStaff({

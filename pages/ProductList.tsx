@@ -26,7 +26,7 @@ const ProductList: React.FC = () => {
 
       let query = supabase
         .from('product')
-        .select('id, product_code, product_long, unit, sn_control, status, brand', { count: 'exact' });
+        .select('id, product_code, product_long, unit, sn_control, status', { count: 'exact' });
 
       // Filter by website_id property (now an array)
       query = query.contains('website_id', [APP_CONFIG.WEBSITE_ID]);
@@ -49,7 +49,7 @@ const ProductList: React.FC = () => {
     fetchProducts(currentPage);
   }, [currentPage]);
 
-  const toggleSNControl = async (id: number, currentStatus: boolean, productCode: string) => {
+  const toggleSNControl = async (id: number, currentStatus: boolean) => {
     try {
       const { error } = await supabase
         .from('product')
@@ -125,7 +125,7 @@ const ProductList: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 text-center">
                         <button
-                          onClick={() => toggleSNControl(product.id, product.sn_control, product.product_code)}
+                          onClick={() => toggleSNControl(product.id, product.sn_control)}
                           className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                             product.sn_control ? 'bg-primary' : 'bg-slate-200'
                           }`}

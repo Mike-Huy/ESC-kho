@@ -16,7 +16,7 @@ const CostAnalysis: React.FC = () => {
       <header className="flex flex-col md:flex-row justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-extrabold text-navy-accent">Chi phí Vận hành Kho</h1>
-          <p className="text-slate-500 mt-1 text-sm font-medium">Phân tích dữ liệu chi tiêu Kho Hàng Sài Gòn • Cập nhật: 15:40 Hôm nay</p>
+          <p className="text-slate-500 mt-1 text-sm font-medium">Phân tích dữ liệu chi tiêu Kho ESC • Cập nhật: 15:40 Hôm nay</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="bg-white border border-border-light rounded-xl px-4 py-2.5 flex items-center gap-3 cursor-pointer hover:border-slate-300 shadow-sm transition-all">

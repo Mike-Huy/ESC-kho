@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { APP_CONFIG } from '../appConfig';
 
@@ -27,7 +27,6 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
   const [receiving, setReceiving] = useState(false);
   const [scanValue, setScanValue] = useState('');
   const [activeItemIdx, setActiveItemIdx] = useState<number | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   const [poInfo, setPoInfo] = useState<any>(null);
 
@@ -53,7 +52,7 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
       if (poError || !poData) throw new Error(poError?.message || 'Không tìm thấy đơn hàng');
       setPoInfo(poData);
 
-      let { data: itemData, error: itemError } = await supabase
+      let { data: itemData } = await supabase
         .from('po_items')
         .select(`
           id,
@@ -497,7 +496,7 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Kho đích</label>
                     <div className="flex items-center gap-2">
                        <span className="material-icons-round text-slate-400 text-sm">warehouse</span>
-                       <p className="font-bold text-slate-700 text-xs uppercase">KHO SÀI GÒN - CHÍNH</p>
+                       <p className="font-bold text-slate-700 text-xs uppercase">KHO ESC - CHÍNH</p>
                     </div>
                  </div>
               </div>

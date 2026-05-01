@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
+import { APP_CONFIG } from '../appConfig';
 
 interface LoginPopupProps {
   onLoginSuccess: (userData: any) => void;
@@ -34,7 +35,6 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onLoginSuccess }) => {
       }
 
       // Step 2.5: Verify Website Access (Multi-tenancy)
-      const { APP_CONFIG } = await import('../appConfig');
       const allowedWebsites = Array.isArray(user.website_id) ? user.website_id : [];
       
       // If website_id mảng is empty, assume they have no access or we want to allow login?
@@ -78,10 +78,10 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onLoginSuccess }) => {
         <div className="p-8">
           <div className="flex flex-col items-center mb-8">
             <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-               <img src="/logo-kho-hang-sg.jpg" alt="Logo" className="w-16 h-16 object-cover rounded-xl" />
+               <img src="/ESC__logo-01.jpg" alt="Logo" className="w-16 h-16 object-cover rounded-xl" />
             </div>
             <h2 className="text-2xl font-extrabold text-slate-900">Đăng nhập Hệ thống</h2>
-            <p className="text-slate-500 text-sm font-medium mt-1">Kho Hàng Sài Gòn WMS</p>
+            <p className="text-slate-500 text-sm font-medium mt-1">Kho ESC WMS</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-5">
@@ -137,7 +137,7 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onLoginSuccess }) => {
         </div>
         
         <div className="bg-slate-50 p-4 text-center border-t border-slate-100">
-          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest">© 2024 Kho Hàng Sài Gòn WMS</p>
+          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest">© 2024 Kho ESC WMS</p>
         </div>
       </div>
     </div>

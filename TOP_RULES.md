@@ -1,4 +1,4 @@
-# DỰ ÁN KHO HÀNG SÀI GÒN WMS - QUY TẮC TỐI CAO (TOP RULES)
+# DỰ ÁN KHO ESC WMS - QUY TẮC TỐI CAO (TOP RULES)
 
 Tệp này chứa các quy định bắt buộc mà AI Assistant (Antigravity) phải đọc và tuân thủ tuyệt đối trong mọi yêu cầu xử lý code cho dự án này.
 
@@ -12,7 +12,7 @@ Tệp này chứa các quy định bắt buộc mà AI Assistant (Antigravity) p
 - **super admin**: Account superadmin phải được mở full quyền xử lý website và database
 
 ## 2. Giao diện & Trải nghiệm người dùng (UI/UX)
-- **Logo**: Luôn sử dụng file `/logo-kho-hang-sg.jpg` làm logo chính thức và icon trình duyệt.
+- **Logo**: Luôn sử dụng file `/ESC__logo-01.jpg` làm logo chính thức và icon trình duyệt.
 - **Thẩm mỹ**: Ưu tiên thiết kế hiện đại, premium, sử dụng CSS/Tailwind sạch sẽ, micro-animations mượt mà.
 - **Ngôn ngữ**: Toàn bộ giao diện người dùng phải sử dụng **Tiếng Việt**
 - **Định dạng ngày**: Ở giao diện thể hiện trên màn hình front-end và back-end luôn là định dạng dd/mm/yyyy, nhưng trong template excel để import vào hệ thống thì sẽ là trường text ddmmyyyy, phần code sẽ tự nhận diện đúng ngày, tháng, năm

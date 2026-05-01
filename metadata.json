@@ -1,5 +1,5 @@
 {
-  "name": "Kho Hàng Sài Gòn WMS",
+  "name": "Kho ESC WMS",
   "description": "A comprehensive Warehouse Management System (WMS) featuring dashboard analytics, inventory tracking, order management, rack mapping, staff timekeeping, and barcode scanning interfaces.",
   "requestFramePermissions": []
 }

@@ -35,7 +35,7 @@ const Dashboard: React.FC = () => {
             <span>/</span>
             <span className="text-primary">Bảng điều khiển</span>
           </nav>
-          <h1 className="text-3xl font-extrabold text-slate-900 mb-2">Dashboard Kho Hàng Sài Gòn</h1>
+          <h1 className="text-3xl font-extrabold text-slate-900 mb-2">Dashboard Kho ESC</h1>
           <p className="text-slate-600 max-w-2xl font-medium">Chào mừng trở lại! Hôm nay hệ thống ghi nhận 142 đơn hàng mới cần xử lý và 12 lô hàng đang trên đường đến.</p>
           <div className="flex gap-4 mt-6">
             <button className="bg-primary hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-primary/20 transition-transform active:scale-95">

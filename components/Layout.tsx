@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PageType, NavItem } from '../types';
+import { APP_CONFIG } from '../appConfig';
 
 export interface UserData {
   id: number;
@@ -9,8 +10,6 @@ export interface UserData {
   isSuperAdmin: boolean;
   allowedModules: string[];
 }
-
-import { APP_CONFIG } from '../appConfig';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -181,7 +180,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
             className="flex items-center gap-2.5 hover:opacity-80 transition-opacity text-left w-full group"
           >
             <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden shadow-lg shadow-blue-500/10 group-active:scale-95 transition-transform">
-              <img src="/logo-kho-hang-sg.jpg" alt="Logo" className="w-full h-full object-cover" />
+              <img src="/ESC__logo-01.jpg" alt="Logo" className="w-full h-full object-cover" />
             </div>
             <div className="flex-1">
               <span className="font-extrabold text-[19px] tracking-tight text-white block leading-tight">

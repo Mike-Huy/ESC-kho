@@ -256,7 +256,7 @@ const InventoryReport: React.FC = () => {
             <div className="relative">
               <select className="w-full pl-3 pr-10 py-1.5 bg-white border border-border-light rounded-lg text-sm text-slate-700 outline-none focus:ring-1 focus:ring-primary appearance-none font-medium">
                 <option>Tất cả kho</option>
-                <option>Kho A - Sài Gòn</option>
+                <option>Kho A - ESC</option>
                 <option>Kho B - Bình Dương</option>
               </select>
               <span className="absolute right-3 top-1/2 -translate-y-1/2 material-icons-round text-slate-400 pointer-events-none">expand_more</span>
@@ -511,7 +511,7 @@ const InventoryReport: React.FC = () => {
               {/* This is the part that will be printed */}
               <div id="print-label-content" className="bg-white p-6 border-2 border-slate-900 rounded-xl flex flex-col items-center gap-4 w-[250px] shadow-sm">
                 <div className="w-full text-center border-b border-slate-100 pb-2 mb-2">
-                   <p className="text-[10px] font-black text-slate-900 uppercase tracking-tighter">KHO HÀNG SÀI GÒN WMS</p>
+                   <p className="text-[10px] font-black text-slate-900 uppercase tracking-tighter">KHO ESC WMS</p>
                 </div>
                 
                 <img 
@@ -550,7 +550,7 @@ const InventoryReport: React.FC = () => {
                           </head>
                           <body>
                             <div class="label">
-                              <div class="header">KHO HÀNG SÀI GÒN WMS</div>
+                              <div class="header">KHO ESC WMS</div>
                               <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${showPrintLabel.product_code_and_sn}" />
                               <div class="code">${showPrintLabel.product_code_and_sn}</div>
                               <div class="sn">S/N: ${showPrintLabel.serial_number}</div>
