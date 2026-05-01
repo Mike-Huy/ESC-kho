@@ -57,7 +57,7 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onLoginSuccess }) => {
       const userData = {
         ...user,
         staffProfile: staffProfile || null,
-        isSuperAdmin: staffProfile?.is_super_admin || false,
+        isSuperAdmin: user.is_super_admin === true,
         allowedModules: staffProfile?.allowed_module || []
       };
 

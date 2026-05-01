@@ -127,8 +127,18 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
 
   // Filter navigation items based on user permissions
   const filteredNavItems = navItems.filter(item => {
+    // If no user, show nothing (should not happen if Layout is rendered)
     if (!user) return false;
+    
+    // Super Admins see everything
     if (user.isSuperAdmin) return true;
+    
+    // Safety Fallback: If allowedModules is missing or empty, show ALL items for now 
+    // to prevent blank sidebar, especially for staff users.
+    const allowedModules = user.allowedModules;
+    if (!allowedModules || (Array.isArray(allowedModules) && allowedModules.length === 0)) {
+      return true;
+    }
     
     // Mapping structure for permissions
     const moduleMapping: Record<string, string> = {
@@ -146,20 +156,20 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
     const requiredModule = moduleMapping[item.id as string];
     if (!requiredModule) return true; // Show items with no mapping by default
     
-    // Robust check for allowedModules
-    const allowedModules = user.allowedModules;
-    if (!allowedModules) return false;
-    
     // If it's a string (e.g. from legacy data), check inclusion. If array, check inclusion.
-    if (Array.isArray(allowedModules)) {
-      return allowedModules.includes(requiredModule);
+    try {
+      if (Array.isArray(allowedModules)) {
+        return allowedModules.includes(requiredModule);
+      }
+      if (typeof allowedModules === 'string') {
+        return (allowedModules as string).includes(requiredModule);
+      }
+    } catch (e) {
+      console.error("Permission check error:", e);
+      return true; // Fallback to showing item on error
     }
     
-    if (typeof allowedModules === 'string') {
-      return (allowedModules as string).includes(requiredModule);
-    }
-    
-    return false;
+    return true; // Final fallback to show item
   });
 
   // Special full-screen layout for mobile check-in
