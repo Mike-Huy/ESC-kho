@@ -22,7 +22,7 @@ const Dashboard: React.FC = () => {
   return (
     <div className="pb-8">
       {/* Hero Section */}
-      <section className="relative h-64 flex items-center overflow-hidden">
+      <section className="relative h-48 flex items-start pt-6 overflow-hidden">
         <img 
           className="absolute inset-0 w-full h-full object-cover brightness-105" 
           src="https://lh3.googleusercontent.com/aida-public/AB6AXuAKRE4koEaAQkwOrYtvd3bCY_IqfikW_iVcr-Ht_6H8doccuN4-jh0kodvXOMAdA_Hmlrrbku2OBrbQyTkjW8flpDygDISDbncsHX_A-ko201IbZRK4m5Jd1J8sDkMo5tmmM8cAV6ewaRxGMGQYlKTlB7WBTZd0Zh-YmHmJJyCKNasLVHYA3Sfr7RMJroHjf1dV-81y-SyuGoiRDtWo0c1Zz86oo2ws2n-fe52dcs27bW0Zz8gPsKXu4NXyQUYc-kktD6ut0Hh4lunm" 
@@ -30,21 +30,10 @@ const Dashboard: React.FC = () => {
         />
         <div className="absolute inset-0 bg-gradient-to-r from-white via-white/80 to-transparent"></div>
         <div className="relative z-10 px-8 w-full max-w-7xl">
-          <nav className="flex mb-3 text-xs font-bold text-slate-500 uppercase tracking-widest gap-2">
-            <span>Hệ thống WMS</span>
-            <span>/</span>
-            <span className="text-primary">Bảng điều khiển</span>
-          </nav>
           <h1 className="text-3xl font-extrabold text-slate-900 mb-2">Dashboard Kho ESC</h1>
-          <p className="text-slate-600 max-w-2xl font-medium">Chào mừng trở lại! Hôm nay hệ thống ghi nhận 142 đơn hàng mới cần xử lý và 12 lô hàng đang trên đường đến.</p>
-          <div className="flex gap-4 mt-6">
-            <button className="bg-primary hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-primary/20 transition-transform active:scale-95">
-              <span className="material-icons-round">add</span> Nhập kho mới
-            </button>
-            <button className="bg-white hover:bg-slate-50 text-navy-accent border border-slate-200 px-6 py-2.5 rounded-lg font-bold flex items-center gap-2 shadow-sm transition-transform active:scale-95">
-              <span className="material-icons-round">file_download</span> Xuất báo cáo
-            </button>
-          </div>
+          <p className="text-slate-600 font-bold md:whitespace-nowrap">
+            Chào mừng trở lại! Hôm nay hệ thống ghi nhận <span className="font-extrabold text-red-800 text-[17px] px-0.5">142</span> đơn hàng mới cần xử lý và <span className="font-extrabold text-red-800 text-[17px] px-0.5">12</span> lô hàng đang trên đường đến.
+          </p>
         </div>
       </section>
 

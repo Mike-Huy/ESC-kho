@@ -1,19 +1,25 @@
 import React, { useState } from 'react';
 
-const InternalProcess: React.FC = () => {
+interface InternalProcessProps {
+  hideHeader?: boolean;
+}
+
+const InternalProcess: React.FC<InternalProcessProps> = ({ hideHeader }) => {
   const [activeTab, setActiveTab] = useState<'debundle' | 'combo'>('debundle');
 
   return (
     <div className="p-8 lg:p-12 space-y-8 animate-in slide-in-from-bottom-5 duration-500">
-      <header>
-        <div className="flex items-center gap-3 mb-2">
-           <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500 border border-indigo-100 uppercase font-black text-xs">
-              <span className="material-icons-round">sync_alt</span>
-           </div>
-           <h1 className="text-3xl font-black text-slate-900 tracking-tight text-uppercase">XỬ LÝ NỘI BỘ (INTERNAL)</h1>
-        </div>
-        <p className="text-slate-500 text-sm font-bold uppercase tracking-widest pl-1">Chuyển đổi quy cách sản phẩm, đóng gói combo và rã hàng</p>
-      </header>
+      {!hideHeader && (
+        <header>
+          <div className="flex items-center gap-3 mb-2">
+             <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500 border border-indigo-100 uppercase font-black text-xs">
+                <span className="material-icons-round">sync_alt</span>
+             </div>
+             <h1 className="text-3xl font-black text-slate-900 tracking-tight text-uppercase">XỬ LÝ NỘI BỘ (INTERNAL)</h1>
+          </div>
+          <p className="text-slate-500 text-sm font-bold uppercase tracking-widest pl-1">Chuyển đổi quy cách sản phẩm, đóng gói combo và rã hàng</p>
+        </header>
+      )}
 
       <div className="flex gap-4 p-1.5 bg-slate-100 rounded-2xl w-fit">
          <button 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, TABLE } from '../supabaseClient';
 import { APP_CONFIG } from '../appConfig';
 
 interface PickingOrder {
@@ -27,7 +27,7 @@ const Picking: React.FC = () => {
       setLoading(true);
       // In a real scenario, we'd filter by status 'pending' or 'new'
       const { data, error } = await supabase
-        .from('so')
+        .from(TABLE('so'))
         .select(`
           id,
           so_code,

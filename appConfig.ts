@@ -13,4 +13,7 @@ export const APP_CONFIG = {
   ALLOWED_SUPPLIERS: [],
   ALLOWED_BRANDS: [],
   DEFAULT_WH_CODE: 'KHO_ESC',
+
+  // Database — tất cả bảng của dự án này có tiền tố "esc_"
+  TABLE_PREFIX: 'esc_',
 };

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, TABLE } from '../supabaseClient';
 import { APP_CONFIG } from '../appConfig';
 
 interface LoginPopupProps {
@@ -20,7 +20,7 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onLoginSuccess }) => {
     try {
       // Step 1: Query users table for the phone number
       const { data: user, error: userError } = await supabase
-        .from('users')
+        .from(TABLE('users'))
         .select('*')
         .eq('phone', phone)
         .single();
@@ -45,7 +45,7 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onLoginSuccess }) => {
 
       // Step 3: Fetch staff profile for permissions
       const { data: staffProfile, error: profileError } = await supabase
-        .from('staff_profiles')
+        .from(TABLE('staff_profiles'))
         .select('*')
         .eq('user_id', user.id)
         .single();
@@ -58,7 +58,7 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onLoginSuccess }) => {
         ...user,
         staffProfile: staffProfile || null,
         isSuperAdmin: user.is_super_admin === true,
-        allowedModules: staffProfile?.allowed_module || []
+        allowedModules: staffProfile?.allowed_modules || []
       };
 
       // Store in localStorage for persistence

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, TABLE } from '../supabaseClient';
+import { APP_CONFIG } from '../appConfig';
 
 const StaffAdmin: React.FC = () => {
   const [staffList, setStaffList] = useState<any[]>([]);
@@ -46,10 +47,11 @@ const StaffAdmin: React.FC = () => {
        try {
          setLoading(true);
          
-         // Lấy dữ liệu từ bảng 'staff'
          const { data, error } = await supabase
-           .from('staff')
-           .select('*')
+           .from(TABLE('users'))
+           .select('id, full_name, phone, avatar, user_type, staff_profiles:esc_staff_profiles!user_id(employee_code, position, dept_id, esc_hr_departments(name))')
+           .eq('user_type', 'staff')
+           .contains('website_id', [APP_CONFIG.WEBSITE_ID])
            .order('full_name', { ascending: true });
 
          if (error) throw error;
@@ -59,14 +61,14 @@ const StaffAdmin: React.FC = () => {
            const mappedStaff = data.map((item: any) => ({
              id: item.id,
              name: item.full_name,
-             code: item.employee_code,
-             dept: item.department,
-             position: item.position,
-             status: item.status || 'off', 
-             in: item.check_in_time ? String(item.check_in_time).substring(0, 5) : '--',
-             out: '--', 
-             total: calculateDuration(item.check_in_time),
-             avatar: item.avatar_url
+             code: item.staff_profiles?.employee_code || '--',
+             dept: item.staff_profiles?.esc_hr_departments?.name || '--',
+             position: item.staff_profiles?.position || '--',
+             status: 'off',
+             in: '--',
+             out: '--',
+             total: '--',
+             avatar: item.avatar
            }));
            
            setStaffList(mappedStaff);

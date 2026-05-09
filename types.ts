@@ -11,11 +11,11 @@ export type PageType =
   | 'taskProgress'
   | 'putAway'
   // Đơn nhập
-  | 'inbound_new' | 'inbound_list' | 'inbound_receive' | 'inbound_return' | 'inbound_internal'
+  | 'grp_inbound' | 'inbound_new' | 'inbound_list' | 'inbound_receive' | 'inbound_return' | 'inbound_internal'
   // Xử lý đơn
   | 'proc_list' | 'proc_pick' | 'proc_pack' | 'proc_route'
   // Đơn xuất
-  | 'outbound_pending' | 'outbound_done' | 'outbound_cancel'
+  | 'grp_outbound' | 'outbound_list' | 'outbound_pending' | 'outbound_done' | 'outbound_cancel'
   // Kho hàng
   | 'wh_list' | 'wh_map' | 'wh_location' | 'wh_stock'
   // Báo cáo
@@ -26,8 +26,8 @@ export type PageType =
   | 'fin_wh' | 'fin_op' | 'fin_hr' | 'fin_supplies' | 'fin_maint'
   // Cài đặt
   | 'set_staff' | 'set_salary' | 'set_permissions'
-  // Sản phẩm
-  | 'product_list'
+  // Sản phẩm & Danh mục quản trị
+  | 'product_list' | 'supplier_list' | 'customer_list'
   // Nhân sự
   | 'hr_staff_list' | 'hr_staff_profile' | 'hr_salary_level' | 'hr_shifts' | 'hr_policy';
 

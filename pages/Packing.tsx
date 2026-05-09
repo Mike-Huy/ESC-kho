@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, TABLE } from '../supabaseClient';
 import { APP_CONFIG } from '../appConfig';
 
 interface PackingOrder {
@@ -24,7 +24,7 @@ const Packing: React.FC = () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('so')
+        .from(TABLE('so'))
         .select(`
           id,
           so_code,

@@ -21,13 +21,7 @@ interface LayoutProps {
 
 const navItems: NavItem[] = [
   { 
-    id: 'grp_inbound', label: '1. Đơn nhập', icon: 'login',
-    children: [
-      { id: 'inbound_new', label: 'Tạo hàng mới', icon: 'add_shopping_cart' },
-      { id: 'inbound_list', label: 'Danh sách đơn', icon: 'list_alt' },
-      { id: 'inbound_return', label: 'Hàng trả', icon: 'settings_backup_restore' },
-      { id: 'inbound_internal', label: 'Xử lý nội bộ', icon: 'sync_alt' },
-    ]
+    id: 'grp_inbound', label: '1. Đơn nhập', icon: 'login'
   },
   { 
     id: 'grp_proc', label: '2. Xử lý đơn', icon: 'fact_check',
@@ -39,17 +33,11 @@ const navItems: NavItem[] = [
     ]
   },
   { 
-    id: 'grp_outbound', label: '3. Đơn xuất', icon: 'logout',
-    children: [
-      { id: 'outbound_pending', label: 'Đơn chờ xuất', icon: 'pending_actions' },
-      { id: 'outbound_done', label: 'Đơn đã xuất', icon: 'task_alt' },
-      { id: 'outbound_cancel', label: 'Đơn hủy', icon: 'cancel' },
-    ]
+    id: 'grp_outbound', label: '3. Đơn xuất', icon: 'logout'
   },
   { 
     id: 'grp_warehouse', label: '4. Kho hàng', icon: 'warehouse',
     children: [
-      { id: 'product_list', label: 'Danh mục SP', icon: 'inventory_2' },
       { id: 'wh_list', label: 'Danh sách kho', icon: 'list' },
       { id: 'rackMap', label: 'Sơ đồ kho', icon: 'map' },
       { id: 'wh_location', label: 'Vị trí kho', icon: 'location_on' },
@@ -94,8 +82,16 @@ const navItems: NavItem[] = [
       { id: 'fin_maint', label: 'Chi phí bảo trì', icon: 'build' },
     ]
   },
+  {
+    id: 'grp_master', label: '9. Danh mục', icon: 'dataset',
+    children: [
+      { id: 'product_list',   label: 'Sản phẩm',      icon: 'inventory_2' },
+      { id: 'supplier_list',  label: 'Nhà cung cấp',  icon: 'local_shipping' },
+      { id: 'customer_list',  label: 'Khách hàng',    icon: 'people_alt' },
+    ]
+  },
   { 
-    id: 'grp_settings', label: '9. Cài đặt', icon: 'settings',
+    id: 'grp_settings', label: '10. Cài đặt', icon: 'settings',
     children: [
       { id: 'staffAdmin', label: 'Nhân viên', icon: 'manage_accounts' },
       { id: 'set_permissions', label: 'Phân quyền', icon: 'security' },
@@ -150,6 +146,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
       'grp_operation': 'operation',
       'grp_hr': 'hr',
       'grp_finance': 'finance',
+      'grp_master': 'inventory',
       'grp_settings': 'hr'
     };
     
@@ -308,15 +305,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
             >
                 <span className="material-icons-round text-2xl">menu</span>
             </button>
-
-             <div className="relative w-full max-w-md hidden md:block">
-              <span className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
-              <input
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary text-slate-700 placeholder-slate-400 transition-all outline-none"
-                placeholder="Tìm kiếm đơn hàng, sản phẩm, SKU..."
-                type="text"
-              />
-            </div>
           </div>
 
           <div className="flex items-center gap-3 sm:gap-4">

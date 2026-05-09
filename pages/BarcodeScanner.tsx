@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, TABLE } from '../supabaseClient';
 
 const BarcodeScanner: React.FC = () => {
   const [sku, setSku] = useState('');
@@ -21,7 +21,7 @@ const BarcodeScanner: React.FC = () => {
 
       if (effectiveProductCode.includes('-')) {
         const { data: snData, error: snError } = await supabase
-          .from('serial_tracking')
+          .from(TABLE('serial_tracking'))
           .select('product_code, serial_number')
           .eq('product_code_and_sn', effectiveProductCode)
           .single();
@@ -34,7 +34,7 @@ const BarcodeScanner: React.FC = () => {
 
       // 2. Tìm sản phẩm theo product_code hoặc barcode
       const { data: productData, error: pError } = await supabase
-        .from('product')
+        .from(TABLE('product'))
         .select('*')
         .or(`product_code.eq."${effectiveProductCode}",barcode.eq."${effectiveProductCode}"`)
         .single();

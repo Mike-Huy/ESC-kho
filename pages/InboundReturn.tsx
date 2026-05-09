@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, TABLE } from '../supabaseClient';
 import { APP_CONFIG } from '../appConfig';
 
-const InboundReturn: React.FC = () => {
+interface InboundReturnProps {
+  hideHeader?: boolean;
+}
+
+const InboundReturn: React.FC<InboundReturnProps> = ({ hideHeader }) => {
   const [returns, setReturns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -15,7 +19,7 @@ const InboundReturn: React.FC = () => {
       setLoading(true);
       // Fetch failed SOs that need to be returned to stock
       const { data, error } = await supabase
-        .from('so')
+        .from(TABLE('so'))
         .select(`
           id,
           so_code,
@@ -43,15 +47,17 @@ const InboundReturn: React.FC = () => {
 
   return (
     <div className="p-8 lg:p-12 space-y-8 animate-in fade-in duration-500">
-      <header>
-        <div className="flex items-center gap-3 mb-2">
-           <div className="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center text-rose-500 border border-rose-100 uppercase font-black text-xs">
-              <span className="material-icons-round">assignment_return</span>
-           </div>
-           <h1 className="text-3xl font-black text-slate-900 tracking-tight">XỬ LÝ HÀNG TRẢ (RETURN)</h1>
-        </div>
-        <p className="text-slate-500 text-sm font-bold uppercase tracking-widest pl-1">Nhập lại kho các đơn hàng giao không thành công</p>
-      </header>
+      {!hideHeader && (
+        <header>
+          <div className="flex items-center gap-3 mb-2">
+             <div className="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center text-rose-500 border border-rose-100 uppercase font-black text-xs">
+                <span className="material-icons-round">assignment_return</span>
+             </div>
+             <h1 className="text-3xl font-black text-slate-900 tracking-tight">XỬ LÝ HÀNG TRẢ (RETURN)</h1>
+          </div>
+          <p className="text-slate-500 text-sm font-bold uppercase tracking-widest pl-1">Nhập lại kho các đơn hàng giao không thành công</p>
+        </header>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {loading ? (

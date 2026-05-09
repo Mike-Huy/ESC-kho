@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, TABLE } from '../supabaseClient';
 import { APP_CONFIG } from '../appConfig';
+import * as XLSX from 'xlsx';
 
 interface Product {
   product_code: string;
@@ -18,7 +19,61 @@ interface InboundItem {
   serials: string[];
 }
 
-const InboundNew: React.FC = () => {
+interface GroupedImportPO {
+  po_code: string;
+  supplier_name: string;
+  order_date: string;
+  items: {
+    product_code: string;
+    qty: number;
+    name?: string;
+    unit?: string;
+    sn_control?: boolean;
+    isValid: boolean;
+    errorMsg?: string;
+    serials?: string[];
+  }[];
+}
+
+interface InboundNewProps {
+  hideHeader?: boolean;
+}
+
+const InboundNew: React.FC<InboundNewProps> = ({ hideHeader }) => {
+  const parseExcelDate = (val: any): string | undefined => {
+    if (!val) return undefined;
+    if (val instanceof Date) {
+      return val.toISOString();
+    }
+    if (typeof val === 'number') {
+      const date = new Date((val - 25569) * 86400 * 1000);
+      return date.toISOString();
+    }
+    const str = String(val).trim();
+    if (!str) return undefined;
+    
+    // Support dd-mm-yyyy, dd/mm/yyyy, dd.mm.yyyy by normalizing separators to '/'
+    const cleanStr = str.replace(/[-.]/g, '/');
+    const parts = cleanStr.split('/');
+    if (parts.length === 3) {
+      const d = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1;
+      const y = parseInt(parts[2], 10);
+      if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
+        const fullYear = y < 100 ? 2000 + y : y;
+        const date = new Date(fullYear, m, d);
+        if (!isNaN(date.getTime())) {
+          return date.toISOString();
+        }
+      }
+    }
+    const parsed = Date.parse(str);
+    if (!isNaN(parsed)) {
+      return new Date(parsed).toISOString();
+    }
+    return undefined;
+  };
+
   const generatePoCode = () => {
     const now = new Date();
     const yy = now.getFullYear().toString().slice(-2);
@@ -36,6 +91,295 @@ const InboundNew: React.FC = () => {
   const [showSNInput, setShowSNInput] = useState<number | null>(null);
   const [tempSN, setTempSN] = useState('');
   const [suppliersList, setSuppliersList] = useState<string[]>([]);
+  const [orderDate, setOrderDate] = useState<string>(() => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  });
+  
+  const [parsedPoCode, setParsedPoCode] = useState<string | null>(null);
+  const [parsedSupplier, setParsedSupplier] = useState<string | null>(null);
+  const [parsedOrderDate, setParsedOrderDate] = useState<string | null>(null);
+
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [groupedImportPOs, setGroupedImportPOs] = useState<GroupedImportPO[]>([]);
+  const [showImportModal, setShowImportModal] = useState(false);
+
+  const downloadTemplate = () => {
+    const data = [
+      ["Mã đơn nhập (po_code)", "Nhà cung cấp (supplier_name)", "Mã sản phẩm (product_code)", "Số lượng (qty)", "Danh sách số Serial (serials)", "Ngày đơn nhập (order_date)"],
+      ["PO-20260510-001", "Công ty Cổ phần Sữa Việt Nam (Vinamilk)", "SP001", 10, "", "10-05-2026"],
+      ["PO-20260510-001", "Công ty Cổ phần Sữa Việt Nam (Vinamilk)", "SP002", 3, "SN10001;SN10002;SN10003", "10-05-2026"]
+    ];
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "MauDonNhap");
+    XLSX.writeFile(workbook, "mau_nhap_don_nhap_chi_tiet.xlsx");
+  };
+
+  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const dataBytes = evt.target?.result;
+        if (!dataBytes) return;
+
+        const workbook = XLSX.read(dataBytes, { type: 'array', cellDates: true });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        
+        const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '' });
+        if (rows.length === 0) {
+          alert('Tải file không thành công hoặc file trống!');
+          return;
+        }
+
+        const parsedRows: { 
+          po_code: string; 
+          supplier_name: string; 
+          product_code: string; 
+          qty: number; 
+          serials: string[]; 
+          order_date: string; 
+        }[] = [];
+
+        let startIndex = 0;
+        const firstRow = rows[0] || [];
+        const firstCell = String(firstRow[0] || '').toLowerCase();
+        if (firstCell.includes('mã') || firstCell.includes('code') || firstCell.includes('sản phẩm') || firstCell.includes('qty') || firstCell.includes('lượng') || firstCell.includes('nhà cung cấp')) {
+          startIndex = 1;
+        }
+
+        for (let i = startIndex; i < rows.length; i++) {
+          const parts = rows[i] || [];
+          if (parts.length >= 2) {
+            let filePo = '';
+            let fileSupplier = '';
+            let code = '';
+            let qty = 1;
+            let serials: string[] = [];
+            let parsedDate = '';
+
+            if (parts.length === 2) {
+              code = String(parts[0] || '').trim();
+              qty = parseInt(String(parts[1] || '1'), 10) || 1;
+              filePo = poCode;
+              fileSupplier = supplier;
+              parsedDate = orderDate;
+            } else {
+              filePo = String(parts[0] || '').trim() || poCode;
+              fileSupplier = String(parts[1] || '').trim() || supplier;
+              code = String(parts[2] || '').trim();
+              qty = parseInt(String(parts[3] || '1'), 10) || 1;
+              const serials_str = String(parts[4] || '').trim();
+              serials = serials_str ? serials_str.split(';').map(s => s.trim()).filter(Boolean) : [];
+              
+              const orderDate_val = parts[5];
+              const parsed = parseExcelDate(orderDate_val);
+              parsedDate = parsed ? parsed.split('T')[0] : orderDate;
+            }
+
+            if (code) {
+              parsedRows.push({ 
+                po_code: filePo, 
+                supplier_name: fileSupplier, 
+                product_code: code, 
+                qty, 
+                serials, 
+                order_date: parsedDate 
+              });
+            }
+          }
+        }
+
+        if (parsedRows.length === 0) {
+          alert('Không tìm thấy dữ liệu hợp lệ trong file. Vui lòng tải file mẫu để xem định dạng!');
+          return;
+        }
+
+        // Fetch products information to validate product_code
+        const codes = Array.from(new Set(parsedRows.map(r => r.product_code)));
+        const { data: dbProducts, error } = await supabase
+          .from(TABLE('product'))
+          .select('product_code, product_long, sn_control, unit')
+          .contains('website_id', [APP_CONFIG.WEBSITE_ID])
+          .in('product_code', codes);
+
+        if (error) throw error;
+
+        const dbProductsMap = new Map<string, any>();
+        dbProducts?.forEach(p => {
+          dbProductsMap.set(p.product_code.toLowerCase(), p);
+        });
+
+        // Group rows by po_code
+        const groupsMap = new Map<string, GroupedImportPO>();
+        
+        parsedRows.forEach(row => {
+          const key = row.po_code;
+          const dbProd = dbProductsMap.get(row.product_code.toLowerCase());
+          
+          let poGroup = groupsMap.get(key);
+          if (!poGroup) {
+            poGroup = {
+              po_code: row.po_code,
+              supplier_name: row.supplier_name,
+              order_date: row.order_date,
+              items: []
+            };
+            groupsMap.set(key, poGroup);
+          }
+
+          if (dbProd) {
+            poGroup.items.push({
+              product_code: dbProd.product_code,
+              qty: row.serials.length > 0 && dbProd.sn_control ? row.serials.length : row.qty,
+              name: dbProd.product_long,
+              unit: dbProd.unit,
+              sn_control: dbProd.sn_control,
+              serials: row.serials,
+              isValid: true
+            });
+          } else {
+            poGroup.items.push({
+              product_code: row.product_code,
+              qty: row.qty,
+              isValid: false,
+              errorMsg: 'Mã sản phẩm không tồn tại',
+              serials: row.serials
+            });
+          }
+        });
+
+        const finalGroups = Array.from(groupsMap.values());
+        setGroupedImportPOs(finalGroups);
+        setShowImportModal(true);
+      } catch (err: any) {
+        console.error('Error importing file:', err);
+        alert(`Lỗi khi đọc file: ${err.message}`);
+      } finally {
+        e.target.value = '';
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const confirmImport = async () => {
+    try {
+      setLoading(true);
+      
+      const validGroups = groupedImportPOs.map(g => ({
+        ...g,
+        items: g.items.filter(item => item.isValid)
+      })).filter(g => g.items.length > 0);
+
+      if (validGroups.length === 0) {
+        alert('Không có đơn hàng nhập hoặc sản phẩm nào hợp lệ để nhập!');
+        return;
+      }
+
+      // Validate serials if controlled
+      for (const group of validGroups) {
+        for (const item of group.items) {
+          if (item.sn_control && (!item.serials || item.serials.length === 0)) {
+            alert(`Đơn ${group.po_code} có sản phẩm ${item.product_code} quản lý S/N nhưng chưa điền danh sách serial!`);
+            return;
+          }
+        }
+      }
+
+      // Kiểm tra po_code nào đã tồn tại trong DB
+      const poCodes = validGroups.map((g: GroupedImportPO) => g.po_code);
+      const { data: existingPOs } = await supabase
+        .from(TABLE('po'))
+        .select('po_code')
+        .in('po_code', poCodes);
+      const existingCodes = new Set((existingPOs || []).map((r: any) => r.po_code));
+
+      // Xóa dữ liệu cũ của các đơn trùng trước khi ghi đè
+      if (existingCodes.size > 0) {
+        const dupList = Array.from(existingCodes) as string[];
+        await supabase.from(TABLE('serial_tracking')).delete().in('po_code', dupList);
+        await supabase.from(TABLE('po_items')).delete().in('po_code', dupList);
+        await supabase.from(TABLE('po')).delete().in('po_code', dupList);
+      }
+
+      // Save POs and their details
+      for (const group of validGroups) {
+        const { error: poError } = await supabase
+          .from(TABLE('po'))
+          .insert([{
+            po_code: group.po_code,
+            supplier_name: group.supplier_name,
+            status: 'pending',
+            order_date: group.order_date,
+            website_id: [APP_CONFIG.WEBSITE_ID]
+          }]);
+
+        if (poError) {
+          throw new Error(`Lỗi tạo đơn ${group.po_code}: ${poError.message}`);
+        }
+
+        const poItems = group.items.map(item => ({
+          po_code: group.po_code,
+          product_code: item.product_code,
+          ordered_qty: item.qty,
+          unit: item.unit || 'Cái',
+        }));
+        
+        const { error: itemError } = await supabase
+          .from(TABLE('po_items'))
+          .insert(poItems);
+          
+        if (itemError) {
+          throw new Error(`Lỗi thêm sản phẩm cho đơn ${group.po_code}: ${itemError.message}`);
+        }
+
+        const snEntries: any[] = [];
+        group.items.forEach(item => {
+          if (item.sn_control && item.serials) {
+            item.serials.forEach(sn => {
+              snEntries.push({
+                product_code: item.product_code,
+                serial_number: sn,
+                status: 'available',
+                po_code: group.po_code,
+                website_id: [APP_CONFIG.WEBSITE_ID]
+              });
+            });
+          }
+        });
+
+        if (snEntries.length > 0) {
+          const { error: snError } = await supabase
+            .from(TABLE('serial_tracking'))
+            .insert(snEntries);
+          if (snError) {
+            throw new Error(`Lỗi lưu danh sách Serial cho đơn ${group.po_code}: ${snError.message}`);
+          }
+        }
+      }
+
+      const overwriteCount = existingCodes.size;
+      const newCount = validGroups.length - overwriteCount;
+      const msg = overwriteCount > 0
+        ? `Nhập file thành công! Đã tạo mới ${newCount} đơn, ghi đè ${overwriteCount} đơn trùng.`
+        : `Nhập file thành công! Đã tạo ${validGroups.length} đơn hàng nhập mới vào hệ thống.`;
+      alert(msg);
+      setShowImportModal(false);
+      setGroupedImportPOs([]);
+    } catch (err: any) {
+      console.error('Error confirming import:', err);
+      alert(err.message || 'Lỗi hệ thống khi lưu đơn nhập.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchSuppliers();
@@ -45,7 +389,7 @@ const InboundNew: React.FC = () => {
     try {
       // Fetch distinct supplier names from po table
       const { data, error } = await supabase
-        .from('po')
+        .from(TABLE('po'))
         .select('supplier_name')
         .contains('website_id', [APP_CONFIG.WEBSITE_ID]);
       
@@ -75,7 +419,7 @@ const InboundNew: React.FC = () => {
       return;
     }
     const { data, error } = await supabase
-      .from('product')
+      .from(TABLE('product'))
       .select('product_code, product_long, sn_control, unit')
       .contains('website_id', [APP_CONFIG.WEBSITE_ID])
       .or(`product_code.ilike.%${q}%,product_long.ilike.%${q}%`)
@@ -146,22 +490,21 @@ const InboundNew: React.FC = () => {
       setLoading(true);
       
       // 1. Create PO
-      const { data: poData, error: poError } = await supabase
-        .from('po')
+      const { error: poError } = await supabase
+        .from(TABLE('po'))
         .insert([{
           po_code: poCode,
           supplier_name: supplier,
           status: 'pending',
+          order_date: orderDate,
           website_id: [APP_CONFIG.WEBSITE_ID]
-        }])
-        .select()
-        .single();
-        
+        }]);
+
       if (poError) throw poError;
 
       // 2. Create PO Items
       const poItems = items.map(item => ({
-        po_id: poData.id,
+        po_code: poCode,
         product_code: item.product_code,
         ordered_qty: item.qty,
         unit: item.unit,
@@ -169,7 +512,7 @@ const InboundNew: React.FC = () => {
       }));
       
       const { error: itemError } = await supabase
-        .from('po_items')
+        .from(TABLE('po_items'))
         .insert(poItems);
         
       if (itemError) throw itemError;
@@ -192,7 +535,7 @@ const InboundNew: React.FC = () => {
 
       if (snEntries.length > 0) {
         const { error: snError } = await supabase
-          .from('serial_tracking')
+          .from(TABLE('serial_tracking'))
           .insert(snEntries);
         if (snError) throw snError;
       }
@@ -212,22 +555,25 @@ const InboundNew: React.FC = () => {
   };
 
   return (
-    <div className="p-6 lg:p-10 space-y-6">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <nav className="flex items-center space-x-2 text-sm text-slate-400 mb-2 font-medium">
-            <span>Đơn nhập</span>
-            <span className="material-icons-round text-xs">chevron_right</span>
-            <span className="text-primary font-bold">Tạo hàng mới</span>
-          </nav>
-          <h1 className="text-2xl font-extrabold flex items-center gap-3 text-slate-900">
-            <span className="p-2 bg-emerald-100 rounded-lg">
-              <span className="material-icons-round text-emerald-600">add_shopping_cart</span>
-            </span>
-            Tạo Đơn Nhập Hàng
-          </h1>
-        </div>
-      </header>
+    <>
+      <div className="p-6 lg:p-10 space-y-6">
+      {!hideHeader && (
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <nav className="flex items-center space-x-2 text-sm text-slate-400 mb-2 font-medium">
+              <span>Đơn nhập</span>
+              <span className="material-icons-round text-xs">chevron_right</span>
+              <span className="text-primary font-bold">Tạo hàng mới</span>
+            </nav>
+            <h1 className="text-2xl font-extrabold flex items-center gap-3 text-slate-900">
+              <span className="p-2 bg-emerald-100 rounded-lg">
+                <span className="material-icons-round text-emerald-600">add_shopping_cart</span>
+              </span>
+              Tạo Đơn Nhập Hàng
+            </h1>
+          </div>
+        </header>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Info and Search */}
@@ -258,6 +604,15 @@ const InboundNew: React.FC = () => {
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 material-icons-round text-slate-400 pointer-events-none">expand_more</span>
               </div>
               <p className="mt-1 text-[10px] text-slate-400 font-medium italic">* Danh sách được lấy từ các đơn hàng trước đó</p>
+            </div>
+            <div>
+              <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Ngày đơn nhập</label>
+              <input 
+                type="date"
+                value={orderDate} 
+                onChange={(e) => setOrderDate(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-primary/20"
+              />
             </div>
           </div>
 
@@ -298,9 +653,41 @@ const InboundNew: React.FC = () => {
         {/* Right Column: Items List */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white rounded-2xl border border-border-light shadow-sm overflow-hidden min-h-[400px] flex flex-col">
-            <div className="p-4 border-b border-border-light bg-slate-50 flex items-center justify-between">
-              <h3 className="font-bold text-slate-800 text-sm">Danh sách hàng nhập</h3>
-              <span className="text-[10px] bg-slate-200 px-2 py-0.5 rounded-full font-bold text-slate-500 uppercase">{items.length} mặt hàng</span>
+            <div className="p-4 border-b border-border-light bg-slate-50 flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-slate-800 text-sm">Danh sách hàng nhập</h3>
+                <span className="text-[10px] bg-slate-200 px-2.5 py-0.5 rounded-full font-black text-slate-500 uppercase">{items.length} mặt hàng</span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                {/* Excel Template Button */}
+                <button 
+                  onClick={downloadTemplate}
+                  className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm hover:border-slate-300"
+                  title="Tải tệp mẫu Excel/CSV để nhập liệu"
+                >
+                  <span className="material-icons-round text-sm text-emerald-600">file_download</span>
+                  <span>Excel Template</span>
+                </button>
+                
+                {/* Excel Import Button */}
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
+                  title="Nhập danh sách sản phẩm từ file Excel/CSV"
+                >
+                  <span className="material-icons-round text-sm">file_upload</span>
+                  <span>Excel Import</span>
+                </button>
+                
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileImport} 
+                  accept=".xlsx,.xls,.csv" 
+                  className="hidden" 
+                />
+              </div>
             </div>
             
             <div className="flex-1 p-4">
@@ -427,6 +814,142 @@ const InboundNew: React.FC = () => {
         </div>
       </div>
     </div>
+
+    {/* Excel/CSV Import Preview Modal */}
+    {showImportModal && (
+      <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <div className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden transform transition-all animate-in fade-in zoom-in duration-300 flex flex-col max-h-[90vh]">
+          {/* Modal Header */}
+          <div className="p-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <span className="material-icons-round">file_upload</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-950">Kiểm tra Danh sách Nhập File</h3>
+                <p className="text-slate-500 text-xs font-medium">Xem trước và đối soát mã sản phẩm theo từng Đơn hàng nhập</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setShowImportModal(false)}
+              className="w-8 h-8 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-all"
+            >
+              <span className="material-icons-round text-lg">close</span>
+            </button>
+          </div>
+
+          {/* Modal Body: Stats & Groups */}
+          <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-slate-50">
+            {/* Quick stats cards */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3 bg-white border border-slate-150 rounded-2xl text-center shadow-sm">
+                <p className="text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Tổng đơn hàng</p>
+                <p className="text-slate-900 text-xl font-black mt-1">{groupedImportPOs.length}</p>
+              </div>
+              <div className="p-3 bg-emerald-50/50 border border-emerald-100 rounded-2xl text-center shadow-sm">
+                <p className="text-emerald-600/70 text-[10px] font-extrabold uppercase tracking-wider">Hợp lệ</p>
+                <p className="text-emerald-700 text-xl font-black mt-1">
+                  {groupedImportPOs.filter(g => g.items.every(x => x.isValid)).length} đơn
+                </p>
+              </div>
+              <div className="p-3 bg-rose-50/50 border border-rose-100 rounded-2xl text-center shadow-sm">
+                <p className="text-rose-600/70 text-[10px] font-extrabold uppercase tracking-wider">Có lỗi mã SP</p>
+                <p className="text-rose-700 text-xl font-black mt-1">
+                  {groupedImportPOs.filter(g => g.items.some(x => !x.isValid)).length} đơn
+                </p>
+              </div>
+            </div>
+
+            {/* List of Grouped PO Cards */}
+            <div className="space-y-4">
+              {groupedImportPOs.map((group, gIdx) => {
+                const hasError = group.items.some(x => !x.isValid);
+                return (
+                  <div key={gIdx} className={`bg-white border rounded-2xl overflow-hidden shadow-sm transition-all hover:shadow-md ${hasError ? 'border-rose-200' : 'border-slate-150'}`}>
+                    {/* Card Header */}
+                    <div className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b ${hasError ? 'bg-rose-50/30 border-rose-100' : 'bg-slate-50/50 border-slate-100'}`}>
+                      <div className="flex items-center gap-3">
+                        <span className="material-icons-round text-primary text-lg">receipt_long</span>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-black text-sm text-slate-800">{group.po_code}</span>
+                            {hasError ? (
+                              <span className="bg-rose-100 text-rose-700 text-[9px] font-black uppercase px-2 py-0.5 rounded-md">Có lỗi</span>
+                            ) : (
+                              <span className="bg-emerald-100 text-emerald-700 text-[9px] font-black uppercase px-2 py-0.5 rounded-md">Hợp lệ</span>
+                            )}
+                          </div>
+                          <div className="text-xs text-slate-500 font-medium">{group.supplier_name}</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-slate-400 text-[10px] font-extrabold uppercase tracking-wider block">Ngày đơn nhập</span>
+                        <span className="text-slate-700 font-bold text-xs">{group.order_date || '--/--/----'}</span>
+                      </div>
+                    </div>
+
+                    {/* Card Body Table */}
+                    <div className="p-3">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-50/70 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                            <th className="p-2 pl-3">Mã SP</th>
+                            <th className="p-2">Tên sản phẩm</th>
+                            <th className="p-2 text-center">Số lượng</th>
+                            <th className="p-2 text-right pr-3">Trạng thái</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {group.items.map((item, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50/30">
+                              <td className="p-2 pl-3 font-mono font-bold text-slate-700">{item.product_code}</td>
+                              <td className="p-2 text-slate-600 font-medium max-w-[200px] truncate">
+                                {item.isValid ? item.name : <span className="text-rose-500 italic">{item.errorMsg}</span>}
+                              </td>
+                              <td className="p-2 text-center font-bold text-slate-900">{item.qty} {item.unit || ''}</td>
+                              <td className="p-2 text-right pr-3">
+                                {item.isValid ? (
+                                  <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold text-[9px]">
+                                    Hợp lệ
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-700 px-2 py-0.5 rounded-full font-bold text-[9px]">
+                                    Lỗi
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Modal Footer */}
+          <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+            <button 
+              onClick={() => setShowImportModal(false)}
+              className="px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 font-bold text-xs hover:bg-slate-100 transition-all"
+            >
+              Hủy bỏ
+            </button>
+            <button 
+              onClick={confirmImport}
+              disabled={groupedImportPOs.length === 0 || groupedImportPOs.every(g => g.items.every(x => !x.isValid))}
+              className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold text-xs shadow-lg shadow-emerald-600/25 transition-all flex items-center gap-2"
+            >
+              <span className="material-icons-round text-sm">check_circle</span>
+              Đồng ý nhập ({groupedImportPOs.reduce((acc, g) => acc + g.items.filter(x => x.isValid).length, 0)} dòng hợp lệ)
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 

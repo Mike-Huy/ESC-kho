@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, TABLE } from '../supabaseClient';
 import { APP_CONFIG } from '../appConfig';
 
 interface InventoryItem {
@@ -83,7 +83,7 @@ const InventoryReport: React.FC = () => {
 
       // Build query with optional brand filtering
       let query = supabase
-        .from('inventory')
+        .from(TABLE('inventory'))
         .select(`
           id,
           product_code,
@@ -173,7 +173,7 @@ const InventoryReport: React.FC = () => {
       try {
         setSNLoading(true);
         const { data, error } = await supabase
-          .from('serial_tracking')
+          .from(TABLE('serial_tracking'))
           .select('*')
           .eq('product_code', showSN);
         

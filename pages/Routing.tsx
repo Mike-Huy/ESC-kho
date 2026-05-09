@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, TABLE } from '../supabaseClient';
 import { APP_CONFIG } from '../appConfig';
 
 interface RoutingOrder {
@@ -24,7 +24,7 @@ const Routing: React.FC = () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('so')
+        .from(TABLE('so'))
         .select('id, so_code, customer_name, delivery_address, status, created_at')
         .contains('website_id', [APP_CONFIG.WEBSITE_ID])
         .in('status', ['shipped', 'completed']) // Mocking orders ready for dispatch

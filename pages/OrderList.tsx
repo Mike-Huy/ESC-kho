@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Order } from '../types';
-import { supabase } from '../supabaseClient';
+import { supabase, TABLE } from '../supabaseClient';
 import { APP_CONFIG } from '../appConfig';
 
 interface OrderListProps {
   onViewDetail: (id: string) => void;
+  statusFilter?: 'pending_proc' | 'completed' | 'cancelled' | '';
+  hideHeader?: boolean;
 }
 
 // Dữ liệu mẫu Fallback
@@ -15,7 +17,7 @@ const MOCK_ORDERS: Order[] = [
   { id: 'ORD-2026-004', customer: 'Lê Văn Hùng', email: 'hung.levan@example.com', status: 'cancelled', date: '08/02/2026', total: '3.200.000 ₫' },
 ];
 
-const OrderList: React.FC<OrderListProps> = ({ onViewDetail }) => {
+const OrderList: React.FC<OrderListProps> = ({ onViewDetail, statusFilter = '', hideHeader = false }) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [isUsingMock, setIsUsingMock] = useState(false);
@@ -26,7 +28,7 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail }) => {
       setLoading(true);
       // Table is named 'so' (Sales Orders)
       let query = supabase
-        .from('so')
+        .from(TABLE('so'))
         .select(`
           *,
           so_items!inner(
@@ -39,6 +41,15 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail }) => {
         .contains('website_id', [APP_CONFIG.WEBSITE_ID])
         .filter('so_items.product.website_id', 'cs', `{${APP_CONFIG.WEBSITE_ID}}`);
 
+      // Filter by statusFilter
+      if (statusFilter === 'pending_proc') {
+        query = query.in('status', ['pending', 'new', 'processing']);
+      } else if (statusFilter === 'completed') {
+        query = query.in('status', ['shipped', 'completed']);
+      } else if (statusFilter === 'cancelled') {
+        query = query.eq('status', 'cancelled');
+      }
+
       query = query.order('created_at', { ascending: false });
 
       if (searchTerm) {
@@ -48,6 +59,16 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail }) => {
       const { data, error } = await query.limit(20);
 
       if (error) throw error;
+
+      // Filter mock fallback based on statusFilter
+      let mockFiltered = MOCK_ORDERS;
+      if (statusFilter === 'pending_proc') {
+        mockFiltered = MOCK_ORDERS.filter(o => ['pending', 'new', 'processing'].includes(o.status.toLowerCase()));
+      } else if (statusFilter === 'completed') {
+        mockFiltered = MOCK_ORDERS.filter(o => ['shipped', 'completed'].includes(o.status.toLowerCase()));
+      } else if (statusFilter === 'cancelled') {
+        mockFiltered = MOCK_ORDERS.filter(o => o.status.toLowerCase() === 'cancelled');
+      }
 
       if (data && data.length > 0) {
         const mappedOrders: Order[] = data.map((item: any) => ({
@@ -62,7 +83,7 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail }) => {
         setIsUsingMock(false);
       } else {
         if (!searchTerm) {
-          setOrders(MOCK_ORDERS);
+          setOrders(mockFiltered);
           setIsUsingMock(true);
         } else {
           setOrders([]);
@@ -71,7 +92,15 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail }) => {
       }
     } catch (error) {
       console.warn('Error fetching orders (using mock):', error);
-      setOrders(MOCK_ORDERS);
+      let mockFiltered = MOCK_ORDERS;
+      if (statusFilter === 'pending_proc') {
+        mockFiltered = MOCK_ORDERS.filter(o => ['pending', 'new', 'processing'].includes(o.status.toLowerCase()));
+      } else if (statusFilter === 'completed') {
+        mockFiltered = MOCK_ORDERS.filter(o => ['shipped', 'completed'].includes(o.status.toLowerCase()));
+      } else if (statusFilter === 'cancelled') {
+        mockFiltered = MOCK_ORDERS.filter(o => o.status.toLowerCase() === 'cancelled');
+      }
+      setOrders(mockFiltered);
       setIsUsingMock(true);
     } finally {
       setLoading(false);
@@ -80,7 +109,7 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail }) => {
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [statusFilter]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,20 +135,22 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail }) => {
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto p-8 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-        <div className="space-y-1">
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-             DANH SÁCH ĐƠN HÀNG
-            {isUsingMock && <span className="text-[9px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-md border border-amber-200 font-black uppercase tracking-widest">Demo</span>}
-          </h2>
-          <p className="text-slate-500 text-sm font-bold uppercase tracking-widest">Quản lý và vận hành đơn hàng (SO)</p>
+    <div className={`${hideHeader ? 'p-6 lg:p-10 max-w-7xl' : 'max-w-[1600px] p-8'} mx-auto animate-in fade-in duration-500`}>
+      {!hideHeader && (
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+          <div className="space-y-1">
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+               DANH SÁCH ĐƠN HÀNG
+              {isUsingMock && <span className="text-[9px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-md border border-amber-200 font-black uppercase tracking-widest">Demo</span>}
+            </h2>
+            <p className="text-slate-500 text-sm font-bold uppercase tracking-widest">Quản lý và vận hành đơn hàng (SO)</p>
+          </div>
+          <button className="bg-primary hover:bg-blue-700 text-white px-8 py-4 rounded-2xl flex items-center justify-center gap-2 font-black transition-all shadow-xl shadow-primary/20 active:scale-95 uppercase text-sm tracking-widest">
+            <span className="material-icons-round text-lg">add_circle</span>
+            <span>Tạo đơn SO mới</span>
+          </button>
         </div>
-        <button className="bg-primary hover:bg-blue-700 text-white px-8 py-4 rounded-2xl flex items-center justify-center gap-2 font-black transition-all shadow-xl shadow-primary/20 active:scale-95 uppercase text-sm tracking-widest">
-          <span className="material-icons-round text-lg">add_circle</span>
-          <span>Tạo đơn SO mới</span>
-        </button>
-      </div>
+      )}
 
       <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/50 mb-8">
         <form onSubmit={handleSearch} className="grid grid-cols-1 lg:grid-cols-12 gap-6">

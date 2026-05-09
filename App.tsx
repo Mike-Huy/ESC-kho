@@ -20,6 +20,8 @@ import StaffProfile from './pages/StaffProfile';
 import RoleManagement from './pages/RoleManagement';
 import BarcodeScanner from './pages/BarcodeScanner';
 import ProductList from './pages/ProductList';
+import SupplierList from './pages/SupplierList';
+import CustomerList from './pages/CustomerList';
 import InboundNew from './pages/InboundNew';
 import InboundList from './pages/InboundList';
 import InboundReceive from './pages/InboundReceive';
@@ -28,6 +30,8 @@ import Packing from './pages/Packing';
 import Routing from './pages/Routing';
 import InboundReturn from './pages/InboundReturn';
 import InternalProcess from './pages/InternalProcess';
+import InboundManager from './pages/InboundManager';
+import OutboundManager from './pages/OutboundManager';
 
 const App: React.FC = () => {
   const [activePage, setActivePage] = useState<PageType>('dashboard');
@@ -67,11 +71,12 @@ const App: React.FC = () => {
       case 'scanner': return <BarcodeScanner />;
       
       // Đơn nhập
-      case 'inbound_new': return <InboundNew />;
-      case 'inbound_list': return <InboundList onReceive={(code) => { setSelectedPOCode(code); setActivePage('inbound_receive'); }} onNew={() => setActivePage('inbound_new')} />;
-      case 'inbound_receive': return <InboundReceive poCode={selectedPOCode || ''} onBack={() => setActivePage('inbound_list')} />;
-      case 'inbound_return': return <InboundReturn />;
-      case 'inbound_internal': return <InternalProcess />;
+      case 'grp_inbound': return <InboundManager onReceive={(code) => { setSelectedPOCode(code); setActivePage('inbound_receive'); }} />;
+      case 'inbound_new': return <InboundManager onReceive={(code) => { setSelectedPOCode(code); setActivePage('inbound_receive'); }} initialTab="inbound_new" />;
+      case 'inbound_list': return <InboundManager onReceive={(code) => { setSelectedPOCode(code); setActivePage('inbound_receive'); }} initialTab="inbound_list" />;
+      case 'inbound_receive': return <InboundReceive poCode={selectedPOCode || ''} onBack={() => setActivePage('grp_inbound')} />;
+      case 'inbound_return': return <InboundManager onReceive={(code) => { setSelectedPOCode(code); setActivePage('inbound_receive'); }} initialTab="inbound_return" />;
+      case 'inbound_internal': return <InboundManager onReceive={(code) => { setSelectedPOCode(code); setActivePage('inbound_receive'); }} initialTab="inbound_internal" />;
       
       // Xử lý đơn
       case 'proc_list': return <OrderList onViewDetail={(id) => { setSelectedOrderCode(id); setActivePage('orderDetail'); }} />;
@@ -80,12 +85,16 @@ const App: React.FC = () => {
       case 'proc_route': return <Routing />;
       
       // Đơn xuất
-      case 'outbound_pending': return <ComingSoon title="Đơn chờ xuất" />;
-      case 'outbound_done': return <ComingSoon title="Đơn đã xuất" />;
-      case 'outbound_cancel': return <ComingSoon title="Đơn hủy" />;
+      case 'grp_outbound': return <OutboundManager onViewDetail={(id) => { setSelectedOrderCode(id); setActivePage('orderDetail'); }} />;
+      case 'outbound_list': return <OutboundManager onViewDetail={(id) => { setSelectedOrderCode(id); setActivePage('orderDetail'); }} initialTab="outbound_list" />;
+      case 'outbound_pending': return <OutboundManager onViewDetail={(id) => { setSelectedOrderCode(id); setActivePage('orderDetail'); }} initialTab="outbound_pending" />;
+      case 'outbound_done': return <OutboundManager onViewDetail={(id) => { setSelectedOrderCode(id); setActivePage('orderDetail'); }} initialTab="outbound_done" />;
+      case 'outbound_cancel': return <OutboundManager onViewDetail={(id) => { setSelectedOrderCode(id); setActivePage('orderDetail'); }} initialTab="outbound_cancel" />;
       
-      // Kho hàng
+      // Kho hàng & Danh mục quản trị
       case 'product_list': return <ProductList />;
+      case 'supplier_list': return <SupplierList />;
+      case 'customer_list': return <CustomerList />;
       case 'wh_list': 
       case 'wh_location': return <WarehouseLocation />;
       case 'wh_map': return <WarehouseMap />;

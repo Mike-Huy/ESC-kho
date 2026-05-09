@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, TABLE } from '../supabaseClient';
 import { APP_CONFIG } from '../appConfig';
 
 interface InboundReceiveProps {
@@ -44,7 +44,7 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
     try {
       setLoading(true);
       const { data: poData, error: poError } = await supabase
-        .from('po')
+        .from(TABLE('po'))
         .select('*')
         .eq('po_code', poCode)
         .single();
@@ -53,7 +53,7 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
       setPoInfo(poData);
 
       let { data: itemData } = await supabase
-        .from('po_items')
+        .from(TABLE('po_items'))
         .select(`
           id,
           product_code,
@@ -80,9 +80,9 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
             vat_rate: it.vat_rate || 0.1,
             website_id: [APP_CONFIG.WEBSITE_ID]
           }));
-          await supabase.from('po_items').insert(itemsToInsert);
+          await supabase.from(TABLE('po_items')).insert(itemsToInsert);
           const { data: refetch } = await supabase
-            .from('po_items')
+            .from(TABLE('po_items'))
             .select(`
               id, product_code, ordered_qty, received_qty, unit,
               product:product_code (product_long, sn_control, image)
@@ -93,7 +93,7 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
       }
 
       const { data: snData } = await supabase
-        .from('serial_tracking')
+        .from(TABLE('serial_tracking'))
         .select('product_code, serial_number')
         .eq('po_code', poCode);
 
@@ -235,9 +235,9 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
       for (const item of items) {
         const qty = item.product?.sn_control ? item.scanned_serials.length : item.received_qty;
         if (item.id > 0) {
-          await supabase.from('po_items').update({ received_qty: qty }).eq('id', item.id);
+          await supabase.from(TABLE('po_items')).update({ received_qty: qty }).eq('id', item.id);
         } else {
-          await supabase.from('po_items').insert({
+          await supabase.from(TABLE('po_items')).insert({
             po_id: poInfo.id,
             product_code: item.product_code,
             ordered_qty: item.ordered_qty,
@@ -256,8 +256,8 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
         ...(poInfo.items.find((orig: any) => orig.product_code === it.product_code) || {})
       }));
 
-      await supabase.from('po').update({ items: updatedJsonItems }).eq('id', poInfo.id);
-      await supabase.from('serial_tracking').delete().eq('po_code', poCode);
+      await supabase.from(TABLE('po')).update({ items: updatedJsonItems }).eq('id', poInfo.id);
+      await supabase.from(TABLE('serial_tracking')).delete().eq('po_code', poCode);
       
       const snEntries: any[] = [];
       items.forEach(item => {
@@ -275,10 +275,10 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
       });
 
       if (snEntries.length > 0) {
-        await supabase.from('serial_tracking').insert(snEntries);
+        await supabase.from(TABLE('serial_tracking')).insert(snEntries);
       }
 
-      await supabase.from('po').update({ status: 'received', actual_delivery: new Date().toISOString() }).eq('po_code', poCode);
+      await supabase.from(TABLE('po')).update({ status: 'received', actual_delivery: new Date().toISOString() }).eq('po_code', poCode);
       onBack();
     } catch (error) {
       console.error('Error receiving goods:', error);

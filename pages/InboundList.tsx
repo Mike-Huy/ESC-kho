@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, TABLE } from '../supabaseClient';
 import { APP_CONFIG } from '../appConfig';
 
 interface InboundListProps {
   onReceive: (poCode: string) => void;
   onNew: () => void;
+  hideHeader?: boolean;
 }
 
-const InboundList: React.FC<InboundListProps> = ({ onReceive, onNew }) => {
+const InboundList: React.FC<InboundListProps> = ({ onReceive, onNew, hideHeader }) => {
   const [pos, setPos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,7 +21,7 @@ const InboundList: React.FC<InboundListProps> = ({ onReceive, onNew }) => {
     try {
       setLoading(true);
       let query = supabase
-        .from('po')
+        .from(TABLE('po'))
         .select(`
           id,
           po_code,
@@ -60,28 +61,30 @@ const InboundList: React.FC<InboundListProps> = ({ onReceive, onNew }) => {
 
   return (
     <div className="p-6 lg:p-10 space-y-6">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <nav className="flex items-center space-x-2 text-sm text-slate-400 mb-2 font-medium">
-            <span>Đơn nhập</span>
-            <span className="material-icons-round text-xs">chevron_right</span>
-            <span className="text-primary font-bold">Danh sách hàng nhập</span>
-          </nav>
-          <h1 className="text-2xl font-extrabold flex items-center gap-3 text-slate-900">
-            <span className="p-2 bg-blue-100 rounded-lg">
-              <span className="material-icons-round text-primary">inventory</span>
-            </span>
-            Quản Lý Đơn Nhập
-          </h1>
-        </div>
-        <button 
-          onClick={onNew}
-          className="bg-primary text-white px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-blue-700 transition-all shadow-md shadow-primary/10"
-        >
-          <span className="material-icons-round text-sm">add</span>
-          TẠO ĐƠN MỚI
-        </button>
-      </header>
+      {!hideHeader && (
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <nav className="flex items-center space-x-2 text-sm text-slate-400 mb-2 font-medium">
+              <span>Đơn nhập</span>
+              <span className="material-icons-round text-xs">chevron_right</span>
+              <span className="text-primary font-bold">Danh sách hàng nhập</span>
+            </nav>
+            <h1 className="text-2xl font-extrabold flex items-center gap-3 text-slate-900">
+              <span className="p-2 bg-blue-100 rounded-lg">
+                <span className="material-icons-round text-primary">inventory</span>
+              </span>
+              Quản Lý Đơn Nhập
+            </h1>
+          </div>
+          <button 
+            onClick={onNew}
+            className="bg-primary text-white px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-blue-700 transition-all shadow-md shadow-primary/10"
+          >
+            <span className="material-icons-round text-sm">add</span>
+            TẠO ĐƠN MỚI
+          </button>
+        </header>
+      )}
 
       <div className="bg-white rounded-[2rem] border border-border-light shadow-sm overflow-hidden">
         <div className="p-6 border-b border-border-light flex flex-col md:flex-row md:items-center justify-between gap-4">

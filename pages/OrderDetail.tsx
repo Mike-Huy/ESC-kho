@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, TABLE } from '../supabaseClient';
 
 interface OrderDetailProps {
   orderCode: string | null;
@@ -35,7 +35,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderCode, onBack }) => {
         
         // 1. Fetch SO
         const { data: soData, error: soError } = await supabase
-          .from('so')
+          .from(TABLE('so'))
           .select('*')
           .eq('so_code', orderCode)
           .single();
@@ -45,7 +45,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderCode, onBack }) => {
 
         // 2. Fetch SO Items with Product Data
         const { data: itemData, error: itemError } = await supabase
-          .from('so_items')
+          .from(TABLE('so_items'))
           .select(`
             id,
             product_code,
@@ -63,7 +63,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderCode, onBack }) => {
 
         // 3. Fetch already assigned S/Ns for this order
         const { data: snData, error: snError } = await supabase
-          .from('serial_tracking')
+          .from(TABLE('serial_tracking'))
           .select('product_code, serial_number')
           .eq('so_code', orderCode);
         
@@ -92,7 +92,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderCode, onBack }) => {
     try {
       setSNLoading(true);
       const { data, error } = await supabase
-        .from('serial_tracking')
+        .from(TABLE('serial_tracking'))
         .select('serial_number')
         .eq('product_code', productCode)
         .eq('status', 'available');
@@ -115,7 +115,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderCode, onBack }) => {
       }
 
       const { error } = await supabase
-        .from('serial_tracking')
+        .from(TABLE('serial_tracking'))
         .update({ 
           so_code: orderCode,
           status: 'sold' // or 'reserved'
@@ -139,7 +139,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderCode, onBack }) => {
   const unassignSN = async (itemIdx: number, serialNumber: string) => {
     try {
       const { error } = await supabase
-        .from('serial_tracking')
+        .from(TABLE('serial_tracking'))
         .update({ 
           so_code: null,
           status: 'available'
