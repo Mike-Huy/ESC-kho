@@ -654,8 +654,8 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail, statusFilter = '', 
               ) : (
                 orders.map((order, idx) => (
                   <tr key={idx} className="group hover:bg-slate-50/50 transition-all duration-300">
-                    <td className="px-6 py-0.5">
-                      <span className="font-black text-primary text-sm tracking-tight leading-none">{order.id}</span>
+                    <td className="px-6 py-0.5 cursor-pointer hover:underline" onClick={() => onViewDetail(order.id)} title="Xem chi tiết đơn hàng">
+                      <span className="font-black text-primary hover:text-indigo-600 text-sm tracking-tight leading-none transition-colors">{order.id}</span>
                     </td>
                     <td className="px-6 py-0.5 max-w-[280px]">
                       <div className="font-medium text-slate-600 text-sm leading-none truncate" title={order.customer}>
@@ -670,74 +670,66 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail, statusFilter = '', 
                       </span>
                     </td>
                     <td className="px-6 py-0.5">
-                      <div className="flex items-center justify-center gap-3 py-1">
+                      <div className="flex items-center justify-center gap-3.5 py-1">
                         {(() => {
                           const status = order.status?.toLowerCase();
-                          const isNew = status === 'pending' || status === 'new';
-                          const isProcessing = ['processing', 'picking', 'packing', 'routing'].includes(status);
-                          const isDone = status === 'shipped' || status === 'completed';
-                          const isCancelled = status === 'cancelled';
+                          const isPicking = status === 'picking' || status === 'new' || status === 'pending';
+                          const isPacking = status === 'packing' || status === 'processing';
+                          const isRouting = status === 'routing';
+                          const isShipped = status === 'shipped' || status === 'completed';
 
                           return (
                             <>
-                              {/* Xem (Visibility) - Hoàn tất (Shipped/Completed) */}
+                              {/* 1. Soạn đơn (Picking) */}
                               <button
-                                onClick={() => onViewDetail(order.id)}
+                                onClick={() => handleUpdateOrderStatus(order.id, 'picking', 'Đang soạn')}
                                 className={`transition-all duration-200 hover:scale-125 ${
-                                  isDone 
-                                    ? 'text-blue-500 font-bold drop-shadow-sm' 
-                                    : 'text-slate-300 opacity-40 hover:opacity-80'
-                                }`}
-                                title="Xem chi tiết đơn hàng (Đã bàn giao/Hoàn tất)"
-                              >
-                                <span className="material-icons-round text-base">visibility</span>
-                              </button>
-
-                              {/* Sửa (Edit) - Đang xử lý (Processing/Picking/Packing/Routing) */}
-                              <button
-                                onClick={() => onViewDetail(order.id)}
-                                className={`transition-all duration-200 hover:scale-125 ${
-                                  isProcessing 
+                                  isPicking 
                                     ? 'text-amber-500 font-bold drop-shadow-sm' 
                                     : 'text-slate-300 opacity-40 hover:opacity-80'
                                 }`}
-                                title="Sửa chi tiết / Quy trình xử lý"
+                                title="Soạn đơn (Picking)"
                               >
-                                <span className="material-icons-round text-base">edit</span>
+                                <span className="material-icons-round text-lg">checklist</span>
                               </button>
 
-                              {/* Thêm (Add) - Mới / Chờ xử lý (Pending/New) */}
+                              {/* 2. Đóng đơn (Packing) */}
                               <button
-                                onClick={() => onViewDetail(order.id)}
+                                onClick={() => handleUpdateOrderStatus(order.id, 'packing', 'Đang đóng gói')}
                                 className={`transition-all duration-200 hover:scale-125 ${
-                                  isNew 
+                                  isPacking 
+                                    ? 'text-indigo-500 font-bold drop-shadow-sm' 
+                                    : 'text-slate-300 opacity-40 hover:opacity-80'
+                                }`}
+                                title="Đóng đơn (Packing)"
+                              >
+                                <span className="material-icons-round text-lg">inventory_2</span>
+                              </button>
+
+                              {/* 3. Sắp tuyến (Routing) */}
+                              <button
+                                onClick={() => handleUpdateOrderStatus(order.id, 'routing', 'Đang sắp tuyến')}
+                                className={`transition-all duration-200 hover:scale-125 ${
+                                  isRouting 
+                                    ? 'text-purple-500 font-bold drop-shadow-sm' 
+                                    : 'text-slate-300 opacity-40 hover:opacity-80'
+                                }`}
+                                title="Sắp tuyến (Routing)"
+                              >
+                                <span className="material-icons-round text-lg">alt_route</span>
+                              </button>
+
+                              {/* 4. Đã bàn giao (Shipped) */}
+                              <button
+                                onClick={() => handleUpdateOrderStatus(order.id, 'shipped', 'Đã bàn giao')}
+                                className={`transition-all duration-200 hover:scale-125 ${
+                                  isShipped 
                                     ? 'text-emerald-500 font-bold drop-shadow-sm' 
                                     : 'text-slate-300 opacity-40 hover:opacity-80'
                                 }`}
-                                title="Soạn mới đơn hàng / Thêm sản phẩm"
+                                title="Đã bàn giao (Shipped)"
                               >
-                                <span className="material-icons-round text-base">add_circle</span>
-                              </button>
-
-                              {/* Xóa (Delete) - Hủy đơn (Cancelled) */}
-                              <button
-                                onClick={async () => {
-                                  if (isCancelled) {
-                                    showToastMsg("Đơn hàng này đã được hủy trước đó", "info");
-                                    return;
-                                  }
-                                  if (window.confirm(`Bạn có chắc chắn muốn hủy đơn hàng ${order.id}?`)) {
-                                    await handleUpdateOrderStatus(order.id, 'cancelled', 'Đã hủy');
-                                  }
-                                }}
-                                className={`transition-all duration-200 hover:scale-125 ${
-                                  isCancelled 
-                                    ? 'text-rose-500 font-bold drop-shadow-sm' 
-                                    : 'text-slate-300 opacity-40 hover:opacity-80 hover:text-rose-500'
-                                }`}
-                                title="Hủy đơn hàng này"
-                              >
-                                <span className="material-icons-round text-base">delete</span>
+                                <span className="material-icons-round text-lg">task_alt</span>
                               </button>
                             </>
                           );

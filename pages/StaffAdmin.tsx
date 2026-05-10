@@ -18,6 +18,18 @@ const StaffAdmin: React.FC = () => {
     { id: 5, name: 'Hoàng Thị E', code: 'NV-005', dept: 'Kiểm kê', position: 'Kiểm soát viên', status: 'break', in: '08:00', out: '--', total: '4h 15m', avatar: '' },
   ];
 
+  // Tính thời gian làm việc khi đã có cả check_in lẫn check_out (TIMESTAMPTZ)
+  const fmtDuration = (checkInTs: string | null, checkOutTs: string | null) => {
+    if (!checkInTs || !checkOutTs) return '--';
+    try {
+      const diffMs = new Date(checkOutTs).getTime() - new Date(checkInTs).getTime();
+      if (diffMs <= 0) return '0h';
+      const h = Math.floor(diffMs / (1000 * 60 * 60));
+      const m = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      return `${h}h ${m}m`;
+    } catch { return '--'; }
+  };
+
   // Hàm tính thời gian làm việc
   const calculateDuration = (checkInStr: string | null) => {
     if (!checkInStr) return '0h';
@@ -47,7 +59,9 @@ const StaffAdmin: React.FC = () => {
     const fetchStaff = async () => {
        try {
          setLoading(true);
-         
+         const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+         // Query 1: Danh sách nhân viên + hồ sơ + phòng ban
          const { data, error } = await supabase
            .from(TABLE('users'))
            .select('id, full_name, phone, avatar, user_type, is_super_admin, staff_profiles:esc_staff_profiles!user_id(employee_code, position, dept_id, esc_hr_departments(name))')
@@ -59,29 +73,70 @@ const StaffAdmin: React.FC = () => {
          if (data && data.length > 0) {
            setSource('supabase');
            const nonSuperAdmins = data.filter((item: any) => item.is_super_admin !== true);
+           const userIds = nonSuperAdmins.map((item: any) => item.id);
+
+           // Query 2: Chấm công hôm nay cho tất cả nhân viên (1 lần duy nhất, không N+1)
+           const { data: attendanceData } = await supabase
+             .from(TABLE('hr_attendance'))
+             .select('user_id, check_in, check_out, status')
+             .in('user_id', userIds)
+             .eq('work_date', today)
+             .contains('website_id', [APP_CONFIG.WEBSITE_ID]);
+
+           // Build map user_id → attendance để lookup O(1)
+           const attendanceMap: Record<number, any> = {};
+           (attendanceData || []).forEach((att: any) => {
+             attendanceMap[att.user_id] = att;
+           });
+
            const mappedStaff = nonSuperAdmins.map((item: any) => {
              const profile = Array.isArray(item.staff_profiles) ? item.staff_profiles[0] : item.staff_profiles;
+             const att = attendanceMap[item.id];
+
+             // Tính trạng thái từ attendance
+             let status = 'off';
+             if (att) {
+               if (att.status === 'present' || att.status === 'late') {
+                 status = att.check_out ? 'done' : 'working';
+               } else if (att.status === 'leave') {
+                 status = 'break';
+               }
+             }
+
+             // Format giờ từ TIMESTAMPTZ → HH:mm
+             const fmtTime = (ts: string | null) => {
+               if (!ts) return '--';
+               try {
+                 return new Date(ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
+               } catch { return '--'; }
+             };
+
+             const checkInStr = fmtTime(att?.check_in);
+             const checkOutStr = fmtTime(att?.check_out);
+             const totalTime = att?.check_in ? calculateDuration(
+               new Date(att.check_in).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })
+             ) : '--';
+
              return {
                id: item.id,
                name: item.full_name,
                code: profile?.employee_code || '--',
                dept: profile?.esc_hr_departments?.name || '--',
                position: profile?.position || '--',
-               status: 'off',
-               in: '--',
-               out: '--',
-               total: '--',
+               status,
+               in: checkInStr,
+               out: checkOutStr,
+               total: status === 'done' ? fmtDuration(att?.check_in, att?.check_out) : totalTime,
                avatar: item.avatar
              };
            });
-           
+
            setStaffList(mappedStaff);
            setStats({
-             present: mappedStaff.filter((s:any) => s.status === 'working' || s.status === 'break').length,
+             present: mappedStaff.filter((s:any) => s.status === 'working' || s.status === 'break' || s.status === 'done').length,
              total: mappedStaff.length
            });
          } else {
-           // Fallback nếu Supabase chưa có data
            console.log('No data in Supabase staff table, using mock.');
            setSource('local');
            setStaffList(mockStaff);

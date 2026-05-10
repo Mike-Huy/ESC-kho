@@ -720,6 +720,61 @@ Flow: `new` → `picking` → `packing` → `routing` → `shipped`
 **`pages/InventoryReport.tsx`** — code UI đầy đủ, routing đúng
 - Đọc từ bảng `esc_inventory` (snapshot tồn kho theo ngày)
 - Nếu DB trống → hiện dữ liệu mẫu Demo (badge "Dữ liệu mẫu")
-- **Cần làm tiếp:** Viết SQL populate `esc_inventory` từ data PO/SO thực tế
+- **Đã xong:** Xem `database/populate_inventory.sql`
 
 ====== KA - END ======
+
+====== KA - START ======
+
+## [2026-05-10] — Populate esc_inventory + Chấm công thực tế StaffAdmin
+
+### 1. File tạo mới: `database/populate_inventory.sql`
+
+Script SQL chạy 1 lần trong Supabase SQL Editor để tính tồn kho từ data PO/SO thực tế.
+
+**Logic tính toán (9 bước, dùng CTE):**
+- `po_daily`: tổng `received_qty` từ `esc_po_items` JOIN `esc_po` (status `received`/`partial`), group by `(product_code, actual_delivery hoặc order_date)`
+- `so_daily`: tổng `shipped_qty` từ `esc_so_items` JOIN `esc_so` (status `shipped`/`completed`/`returned`), group by `(product_code, shipped_date hoặc order_date)`
+- `adjust_daily`: điều chỉnh từ `esc_stock_movement` type=`adjust`
+- `intransit_daily`: hàng đang vận chuyển từ `esc_stock_movement` type=`transfer` chưa completed
+- `daily_with_running`: dùng window function `SUM() OVER (PARTITION BY product_code ORDER BY trans_date ROWS UNBOUNDED PRECEDING)` để tính `start_qty` và `available_qty` lũy tiến
+- **Upsert** vào `esc_inventory` với `ON CONFLICT (product_code, wh_code, trans_date) DO UPDATE`
+- **Bước 9 (tùy chọn):** tạo snapshot hôm nay cho SP còn tồn kho nhưng không có giao dịch mới → `InventoryReport` luôn thấy tồn kho hiện tại
+
+**Cách chạy (MIKE thực hiện):**
+1. Vào **Supabase Dashboard → SQL Editor**
+2. Paste và chạy `database/populate_inventory.sql`
+3. Kết quả kiểm tra hiển thị cuối script (50 dòng mới nhất)
+4. **Chạy lại mỗi ngày** (hoặc sau khi có giao dịch PO/SO mới) để cập nhật snapshot
+
+**Lưu ý quan trọng:**
+- Script tự tạo kho `ESC-MAIN` nếu chưa có
+- `available_qty` không bao giờ âm (`GREATEST(0, ...)`)
+- `InventoryReport.tsx` đọc trực tiếp từ `esc_inventory` — sau khi chạy script sẽ hiện data thật, không còn fallback mock
+
+---
+
+### 2. File đã sửa: `pages/StaffAdmin.tsx`
+
+**Tính năng mới: join `esc_hr_attendance` để hiển thị chấm công thực tế hôm nay**
+
+**Logic:**
+- Query 1: Lấy danh sách nhân viên + hồ sơ + phòng ban (như cũ)
+- Query 2 (mới): Lấy toàn bộ bản ghi chấm công hôm nay (`work_date = today`) cho tất cả user_id trong 1 query duy nhất (`IN` thay vì N+1)
+- Build `attendanceMap: Record<userId, attendance>` để lookup O(1)
+- Mapping trạng thái từ `att.status`:
+  - `present` / `late` + chưa có `check_out` → **Đang làm việc**
+  - `present` / `late` + đã có `check_out` → **Đã ra về** (`done`)
+  - `leave` → **Nghỉ giữa ca**
+  - Không có record → **Nghỉ ca**
+- Hàm `fmtDuration(checkInTs, checkOutTs)` tính thời gian làm đủ ca (từ TIMESTAMPTZ)
+- Hàm `calculateDuration(checkInStr)` tính thời gian đang làm (giờ vào đến hiện tại)
+
+**Lưu ý quan trọng cho MI:**
+- Cột `status` giờ có thêm giá trị `'done'` (đã ra về) — nếu MI muốn thêm badge màu mới cho trạng thái này, cần thêm vào điều kiện render ở dòng `row.status === 'working' ? ... : row.status === 'break' ? ... : ...`
+- Hiện tại `'done'` rơi vào nhánh `else` → hiển thị "Nghỉ ca" (màu xám) — chưa chính xác về ngữ nghĩa. **MI cần thêm nhánh cho `'done'`** (ví dụ: badge xanh emerald "Đã ra về")
+- Stats `present` đã tính đúng: đếm cả `working`, `break`, `done`
+- Cần có data trong `esc_hr_attendance` trước thì mới thấy dữ liệu thực tế; nếu bảng trống → fallback mock
+
+====== KA - END ======
+
