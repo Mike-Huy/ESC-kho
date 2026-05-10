@@ -670,47 +670,74 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail, statusFilter = '', 
                       </span>
                     </td>
                     <td className="px-6 py-0.5">
-                      <div className="flex items-center justify-center gap-1.5 opacity-80 group-hover:opacity-100 transition-all duration-300 py-0.5">
+                      <div className="flex items-center justify-center gap-3 py-1">
                         {(() => {
-                          const next = getNextStatus(order.status);
-                          const isCancelled = order.status === 'cancelled';
-                          const isDone = order.status === 'shipped';
-                          const colorBtn: Record<string, string> = {
-                            blue:    'bg-blue-50 border-blue-100 text-blue-600 hover:bg-blue-600',
-                            amber:   'bg-amber-50 border-amber-100 text-amber-600 hover:bg-amber-600',
-                            indigo:  'bg-indigo-50 border-indigo-100 text-indigo-600 hover:bg-indigo-600',
-                            purple:  'bg-purple-50 border-purple-100 text-purple-600 hover:bg-purple-600',
-                            emerald: 'bg-emerald-50 border-emerald-100 text-emerald-600 hover:bg-emerald-600',
-                          };
+                          const status = order.status?.toLowerCase();
+                          const isNew = status === 'pending' || status === 'new';
+                          const isProcessing = ['processing', 'picking', 'packing', 'routing'].includes(status);
+                          const isDone = status === 'shipped' || status === 'completed';
+                          const isCancelled = status === 'cancelled';
+
                           return (
                             <>
-                              {/* Nút chuyển sang trạng thái tiếp theo */}
-                              {next && !isCancelled && (
-                                <button
-                                  onClick={() => handleUpdateOrderStatus(order.id, next.value, next.label)}
-                                  className={`flex items-center gap-1.5 px-2.5 h-7 rounded-lg border text-xs font-black hover:text-white hover:scale-105 active:scale-95 transition-all shadow-sm ${colorBtn[next.color] || colorBtn.blue}`}
-                                  title={`Chuyển sang: ${next.label}`}
-                                >
-                                  <span className="material-icons-round text-sm">{next.icon}</span>
-                                  <span className="hidden lg:inline">{next.label}</span>
-                                </button>
-                              )}
-
-                              {/* Đã bàn giao — không có nút tiếp theo */}
-                              {isDone && (
-                                <span className="flex items-center gap-1 px-2.5 h-7 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-600 text-xs font-black">
-                                  <span className="material-icons-round text-sm">verified</span>
-                                  <span className="hidden lg:inline">Hoàn tất</span>
-                                </span>
-                              )}
-
-                              {/* Xem chi tiết */}
+                              {/* Xem (Visibility) - Hoàn tất (Shipped/Completed) */}
                               <button
                                 onClick={() => onViewDetail(order.id)}
-                                className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-900 hover:text-white hover:scale-110 active:scale-95 transition-all shadow-sm"
-                                title="Xem chi tiết"
+                                className={`transition-all duration-200 hover:scale-125 ${
+                                  isDone 
+                                    ? 'text-blue-500 font-bold drop-shadow-sm' 
+                                    : 'text-slate-300 opacity-40 hover:opacity-80'
+                                }`}
+                                title="Xem chi tiết đơn hàng (Đã bàn giao/Hoàn tất)"
                               >
                                 <span className="material-icons-round text-base">visibility</span>
+                              </button>
+
+                              {/* Sửa (Edit) - Đang xử lý (Processing/Picking/Packing/Routing) */}
+                              <button
+                                onClick={() => onViewDetail(order.id)}
+                                className={`transition-all duration-200 hover:scale-125 ${
+                                  isProcessing 
+                                    ? 'text-amber-500 font-bold drop-shadow-sm' 
+                                    : 'text-slate-300 opacity-40 hover:opacity-80'
+                                }`}
+                                title="Sửa chi tiết / Quy trình xử lý"
+                              >
+                                <span className="material-icons-round text-base">edit</span>
+                              </button>
+
+                              {/* Thêm (Add) - Mới / Chờ xử lý (Pending/New) */}
+                              <button
+                                onClick={() => onViewDetail(order.id)}
+                                className={`transition-all duration-200 hover:scale-125 ${
+                                  isNew 
+                                    ? 'text-emerald-500 font-bold drop-shadow-sm' 
+                                    : 'text-slate-300 opacity-40 hover:opacity-80'
+                                }`}
+                                title="Soạn mới đơn hàng / Thêm sản phẩm"
+                              >
+                                <span className="material-icons-round text-base">add_circle</span>
+                              </button>
+
+                              {/* Xóa (Delete) - Hủy đơn (Cancelled) */}
+                              <button
+                                onClick={async () => {
+                                  if (isCancelled) {
+                                    showToastMsg("Đơn hàng này đã được hủy trước đó", "info");
+                                    return;
+                                  }
+                                  if (window.confirm(`Bạn có chắc chắn muốn hủy đơn hàng ${order.id}?`)) {
+                                    await handleUpdateOrderStatus(order.id, 'cancelled', 'Đã hủy');
+                                  }
+                                }}
+                                className={`transition-all duration-200 hover:scale-125 ${
+                                  isCancelled 
+                                    ? 'text-rose-500 font-bold drop-shadow-sm' 
+                                    : 'text-slate-300 opacity-40 hover:opacity-80 hover:text-rose-500'
+                                }`}
+                                title="Hủy đơn hàng này"
+                              >
+                                <span className="material-icons-round text-base">delete</span>
                               </button>
                             </>
                           );
