@@ -39,10 +39,10 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onLoginSuccess }) => {
       // Step 3: Set RLS session
       await supabase.rpc('set_app_user', { uid: user.id });
 
-      // Step 4: Fetch staff profile for permissions
+      // Step 4: Fetch staff profile + role info
       const { data: staffProfile, error: profileError } = await supabase
         .from(TABLE('staff_profiles'))
-        .select('*')
+        .select('*, erp_role:erp_role_id(name, label, color)')
         .eq('user_id', user.id)
         .single();
 
@@ -50,11 +50,16 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onLoginSuccess }) => {
         console.error('Error fetching staff profile:', profileError);
       }
 
+      const erp_role = (staffProfile as any)?.erp_role;
+
       const userData = {
         ...user,
         staffProfile: staffProfile || null,
         isSuperAdmin: user.is_super_admin === true,
-        allowedModules: staffProfile?.allowed_modules || []
+        allowedModules: staffProfile?.allowed_modules || [],
+        roleLabel: erp_role?.label || null,
+        roleName: erp_role?.name || null,
+        roleColor: erp_role?.color || null,
       };
 
       localStorage.setItem('wms_user', JSON.stringify(userData));

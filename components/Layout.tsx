@@ -9,6 +9,9 @@ export interface UserData {
   avatar?: string;
   isSuperAdmin: boolean;
   allowedModules: string[];
+  roleLabel?: string;   // label từ esc_erp_roles (ví dụ: 'Trưởng nhóm')
+  roleName?: string;    // name từ esc_erp_roles (ví dụ: 'leader')
+  roleColor?: string;   // màu hex của role
 }
 
 interface LayoutProps {
@@ -332,8 +335,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
             <div className="hidden sm:flex items-center gap-3 pl-2">
               <div className="text-right">
                 <p className="text-sm font-bold text-slate-900 leading-none">{user?.full_name || 'Người dùng'}</p>
-                <p className="text-[10px] text-primary font-bold uppercase tracking-wider mt-1">
-                  {user?.isSuperAdmin ? 'Super Admin' : 'Nhân viên'}
+                <p
+                  className="text-[10px] font-bold uppercase tracking-wider mt-1"
+                  style={{ color: user?.roleColor || (user?.isSuperAdmin ? '#ef4444' : '#3b82f6') }}
+                >
+                  {user?.isSuperAdmin && !user?.roleLabel
+                    ? 'Super Admin'
+                    : user?.roleLabel || 'Nhân viên'}
                 </p>
               </div>
               
