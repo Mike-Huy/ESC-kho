@@ -392,42 +392,64 @@ const RoleManagement: React.FC = () => {
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {filteredStaff.map(person => {
-                      const assignedRole = roles.find(r => r.id === person.erp_role_id);
-                      return (
-                        <div
-                          key={person.id}
-                          className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:border-primary/30 hover:shadow-sm transition-all"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center">
-                              {assignedRole ? (
-                                <div className="w-5 h-5 rounded-full" style={{ backgroundColor: assignedRole.color }} />
-                              ) : (
-                                <span className="material-icons-round text-slate-400">person</span>
-                              )}
-                            </div>
-                            <div>
-                              <h4 className="text-sm font-bold text-slate-800">{person.full_name}</h4>
-                              <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: assignedRole?.color || '#94a3b8' }}>
-                                {assignedRole?.label || 'Chưa gán role'}
-                              </p>
-                            </div>
-                          </div>
-                          <select
-                            className="bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-bold px-3 py-1.5 focus:ring-2 focus:ring-primary/20 outline-none cursor-pointer transition-all"
-                            value={person.erp_role_id || ''}
-                            onChange={e => assignRole(person.id, e.target.value ? parseInt(e.target.value) : null)}
-                          >
-                            <option value="">-- Chưa gán --</option>
-                            {roles.map(r => (
-                              <option key={r.id} value={r.id}>{r.label}</option>
-                            ))}
-                          </select>
-                        </div>
-                      );
-                    })}
+                  <div className="overflow-x-auto rounded-xl border border-slate-100 bg-white shadow-sm">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">
+                          <th className="px-6 py-3.5">Nhân viên</th>
+                          <th className="px-6 py-3.5">Vai trò hiện tại</th>
+                          <th className="px-6 py-3.5 text-right">Thay đổi vai trò</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredStaff.map(person => {
+                          const assignedRole = roles.find(r => r.id === person.erp_role_id);
+                          return (
+                            <tr key={person.id} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center text-slate-500 shadow-sm">
+                                    {assignedRole ? (
+                                      <div className="w-5 h-5 rounded-full" style={{ backgroundColor: assignedRole.color }} />
+                                    ) : (
+                                      <span className="material-icons-round text-slate-400">person</span>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <h4 className="text-sm font-bold text-slate-800 leading-snug">{person.full_name}</h4>
+                                    <p className="text-[11px] text-slate-400 mt-0.5">ID: {person.id}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span 
+                                  className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border"
+                                  style={{ 
+                                    backgroundColor: assignedRole ? `${assignedRole.color}15` : '#f1f5f9',
+                                    color: assignedRole?.color || '#64748b',
+                                    borderColor: assignedRole ? `${assignedRole.color}30` : '#e2e8f0'
+                                  }}
+                                >
+                                  {assignedRole?.label || 'Chưa gán role'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <select
+                                  className="bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300 rounded-lg text-[12px] font-bold px-3 py-1.5 focus:ring-2 focus:ring-primary/20 outline-none cursor-pointer transition-all inline-block text-slate-700 min-w-[150px]"
+                                  value={person.erp_role_id || ''}
+                                  onChange={e => assignRole(person.id, e.target.value ? parseInt(e.target.value) : null)}
+                                >
+                                  <option value="">-- Chưa gán --</option>
+                                  {roles.map(r => (
+                                    <option key={r.id} value={r.id}>{r.label}</option>
+                                  ))}
+                                </select>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
 
                   {filteredStaff.length === 0 && (
