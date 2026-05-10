@@ -477,22 +477,50 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail, statusFilter = '', 
     fetchOrders();
   };
 
+  // Flow: new → picking → packing → routing → shipped
+  const STATUS_FLOW = [
+    { value: 'new',      label: 'Mới',             icon: 'inbox',       color: 'blue' },
+    { value: 'picking',  label: 'Đang soạn',        icon: 'checklist',   color: 'amber' },
+    { value: 'packing',  label: 'Đang đóng gói',    icon: 'inventory_2', color: 'indigo' },
+    { value: 'routing',  label: 'Đang sắp tuyến',   icon: 'alt_route',   color: 'purple' },
+    { value: 'shipped',  label: 'Đã bàn giao',      icon: 'task_alt',    color: 'emerald' },
+  ];
+
+  const getNextStatus = (current: string) => {
+    const idx = STATUS_FLOW.findIndex(s => s.value === current);
+    if (idx === -1 || idx >= STATUS_FLOW.length - 1) return null;
+    return STATUS_FLOW[idx + 1];
+  };
+
+  const getStatusMeta = (status: string) => {
+    return STATUS_FLOW.find(s => s.value === status) || { value: status, label: status, icon: 'help', color: 'slate' };
+  };
+
   const getStatusBadge = (status: string) => {
     const s = status?.toLowerCase();
-    switch (s) {
-      case 'pending': 
-      case 'new':
-        return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-black bg-blue-50 text-blue-600 border border-blue-100 uppercase tracking-tighter"><span className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2 animate-pulse"></span>Mới</span>;
-      case 'processing': 
-        return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-black bg-amber-50 text-amber-600 border border-amber-100 uppercase tracking-tighter"><span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-2 animate-pulse"></span>Đang xử lý</span>;
-      case 'shipped': 
-      case 'completed':
-        return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-black bg-emerald-50 text-emerald-600 border border-emerald-100 uppercase tracking-tighter"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2"></span>Hoàn tất</span>;
-      case 'cancelled': 
-        return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-black bg-slate-100 text-slate-500 border border-slate-200 uppercase tracking-tighter"><span className="w-1.5 h-1.5 rounded-full bg-slate-400 mr-2"></span>Đã hủy</span>;
-      default: 
-        return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-black bg-slate-50 text-slate-500 border border-slate-200 uppercase tracking-tighter">{status}</span>;
+    if (s === 'cancelled') {
+      return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-black bg-slate-100 text-slate-500 border border-slate-200 uppercase tracking-tighter"><span className="w-1.5 h-1.5 rounded-full bg-slate-400 mr-2"></span>Đã hủy</span>;
     }
+    const meta = getStatusMeta(s);
+    const colorMap: Record<string, string> = {
+      blue:    'bg-blue-50 text-blue-600 border-blue-100',
+      amber:   'bg-amber-50 text-amber-600 border-amber-100',
+      indigo:  'bg-indigo-50 text-indigo-600 border-indigo-100',
+      purple:  'bg-purple-50 text-purple-600 border-purple-100',
+      emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+      slate:   'bg-slate-50 text-slate-500 border-slate-200',
+    };
+    const dotMap: Record<string, string> = {
+      blue: 'bg-blue-500', amber: 'bg-amber-500', indigo: 'bg-indigo-500',
+      purple: 'bg-purple-500', emerald: 'bg-emerald-500', slate: 'bg-slate-400',
+    };
+    const isActive = !['shipped', 'cancelled', 'completed'].includes(s);
+    return (
+      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-black border uppercase tracking-tighter ${colorMap[meta.color] || colorMap.slate}`}>
+        <span className={`w-1.5 h-1.5 rounded-full mr-2 ${dotMap[meta.color] || dotMap.slate} ${isActive ? 'animate-pulse' : ''}`}></span>
+        {meta.label}
+      </span>
+    );
   };
 
   return (
@@ -643,50 +671,50 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail, statusFilter = '', 
                     </td>
                     <td className="px-6 py-0.5">
                       <div className="flex items-center justify-center gap-1.5 opacity-80 group-hover:opacity-100 transition-all duration-300 py-0.5">
-                         {/* Soạn đơn */}
-                         <button 
-                           onClick={() => handleUpdateOrderStatus(order.id, 'processing', 'Soạn đơn')} 
-                           className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-150 flex items-center justify-center text-blue-600 hover:bg-blue-600 hover:text-white hover:scale-110 active:scale-95 transition-all shadow-sm"
-                           title="Soạn đơn"
-                         >
-                           <span className="material-icons-round text-base">checklist</span>
-                         </button>
+                        {(() => {
+                          const next = getNextStatus(order.status);
+                          const isCancelled = order.status === 'cancelled';
+                          const isDone = order.status === 'shipped';
+                          const colorBtn: Record<string, string> = {
+                            blue:    'bg-blue-50 border-blue-100 text-blue-600 hover:bg-blue-600',
+                            amber:   'bg-amber-50 border-amber-100 text-amber-600 hover:bg-amber-600',
+                            indigo:  'bg-indigo-50 border-indigo-100 text-indigo-600 hover:bg-indigo-600',
+                            purple:  'bg-purple-50 border-purple-100 text-purple-600 hover:bg-purple-600',
+                            emerald: 'bg-emerald-50 border-emerald-100 text-emerald-600 hover:bg-emerald-600',
+                          };
+                          return (
+                            <>
+                              {/* Nút chuyển sang trạng thái tiếp theo */}
+                              {next && !isCancelled && (
+                                <button
+                                  onClick={() => handleUpdateOrderStatus(order.id, next.value, next.label)}
+                                  className={`flex items-center gap-1.5 px-2.5 h-7 rounded-lg border text-xs font-black hover:text-white hover:scale-105 active:scale-95 transition-all shadow-sm ${colorBtn[next.color] || colorBtn.blue}`}
+                                  title={`Chuyển sang: ${next.label}`}
+                                >
+                                  <span className="material-icons-round text-sm">{next.icon}</span>
+                                  <span className="hidden lg:inline">{next.label}</span>
+                                </button>
+                              )}
 
-                         {/* Đóng hàng */}
-                         <button 
-                           onClick={() => handleUpdateOrderStatus(order.id, 'processing', 'Đóng hàng')} 
-                           className="w-7 h-7 rounded-lg bg-amber-50 border border-amber-150 flex items-center justify-center text-amber-600 hover:bg-amber-600 hover:text-white hover:scale-110 active:scale-95 transition-all shadow-sm"
-                           title="Đóng hàng"
-                         >
-                           <span className="material-icons-round text-base">inventory_2</span>
-                         </button>
+                              {/* Đã bàn giao — không có nút tiếp theo */}
+                              {isDone && (
+                                <span className="flex items-center gap-1 px-2.5 h-7 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-600 text-xs font-black">
+                                  <span className="material-icons-round text-sm">verified</span>
+                                  <span className="hidden lg:inline">Hoàn tất</span>
+                                </span>
+                              )}
 
-                         {/* Sắp tuyến */}
-                         <button 
-                           onClick={() => handleUpdateOrderStatus(order.id, 'processing', 'Sắp tuyến')} 
-                           className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-150 flex items-center justify-center text-indigo-600 hover:bg-indigo-600 hover:text-white hover:scale-110 active:scale-95 transition-all shadow-sm"
-                           title="Sắp tuyến"
-                         >
-                           <span className="material-icons-round text-base">alt_route</span>
-                         </button>
-
-                         {/* Đã giao */}
-                         <button 
-                           onClick={() => handleUpdateOrderStatus(order.id, 'shipped', 'Đã giao')} 
-                           className="w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-150 flex items-center justify-center text-emerald-600 hover:bg-emerald-600 hover:text-white hover:scale-110 active:scale-95 transition-all shadow-sm"
-                           title="Đã giao"
-                         >
-                           <span className="material-icons-round text-base">task_alt</span>
-                         </button>
-
-                         {/* Xem chi tiết */}
-                         <button 
-                           onClick={() => onViewDetail(order.id)} 
-                           className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-900 hover:text-white hover:scale-110 active:scale-95 transition-all shadow-sm"
-                           title="Xem chi tiết"
-                         >
-                           <span className="material-icons-round text-base">visibility</span>
-                         </button>
+                              {/* Xem chi tiết */}
+                              <button
+                                onClick={() => onViewDetail(order.id)}
+                                className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-900 hover:text-white hover:scale-110 active:scale-95 transition-all shadow-sm"
+                                title="Xem chi tiết"
+                              >
+                                <span className="material-icons-round text-base">visibility</span>
+                              </button>
+                            </>
+                          );
+                        })()}
                       </div>
                     </td>
                   </tr>
