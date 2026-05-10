@@ -327,26 +327,28 @@ const InventoryReport: React.FC = () => {
                   ) : (
                     products.map((row, idx) => (
                       <tr key={idx} className={`hover:bg-primary/5 transition-colors group cursor-pointer ${row.alert ? 'bg-rose-50/30' : ''}`}>
-                        <td className="px-6 py-1.5 font-mono text-xs text-primary font-bold">
-                          <div className="flex items-center gap-2">
+                        <td className="px-6 py-0.5 font-mono text-xs text-primary font-bold">
+                          <div className="flex items-center gap-2 py-0.5">
                             {row.sn_control && (
                               <span className="material-icons-round text-primary text-[14px]" title="Có quản lý S/N">qr_code</span>
                             )}
                             {formatValue(row.sku)}
                           </div>
                         </td>
-                        <td className="px-6 py-1.5 font-bold text-slate-700 text-[13px]">{formatValue(row.name)}</td>
-                        <td className="px-6 py-1.5 text-center text-slate-500 text-xs font-semibold">{formatValue(row.unit)}</td>
-                        <td className="px-6 py-1.5 text-right font-bold text-slate-600">{formatNumber(row.start)}</td>
-                        <td className="px-6 py-1.5 text-right font-bold text-emerald-600">{row.in > 0 ? `+${formatNumber(row.in)}` : '0'}</td>
-                        <td className="px-6 py-1.5 text-right font-bold text-rose-600">{row.out > 0 ? `-${formatNumber(row.out)}` : '0'}</td>
-                        <td className={`px-6 py-1.5 text-right font-extrabold ${row.alert ? 'text-rose-600' : 'text-primary bg-primary/5'}`}>
-                          <div className="flex items-center justify-end gap-2">
+                        <td className="px-6 py-0.5 font-bold text-slate-700 text-[13px] leading-tight">
+                          <div className="py-0.5">{formatValue(row.name)}</div>
+                        </td>
+                        <td className="px-6 py-0.5 text-center text-slate-500 text-xs font-semibold">{formatValue(row.unit)}</td>
+                        <td className="px-6 py-0.5 text-right font-bold text-slate-600">{formatNumber(row.start)}</td>
+                        <td className="px-6 py-0.5 text-right font-bold text-emerald-600">{row.in > 0 ? `+${formatNumber(row.in)}` : '0'}</td>
+                        <td className="px-6 py-0.5 text-right font-bold text-rose-600">{row.out > 0 ? `-${formatNumber(row.out)}` : '0'}</td>
+                        <td className={`px-6 py-0.5 text-right font-extrabold ${row.alert ? 'text-rose-600' : 'text-primary bg-primary/5'}`}>
+                          <div className="flex items-center justify-end gap-2 py-0.5">
                             {formatNumber(row.end)}
                             {row.sn_control && (
                               <button 
                                 onClick={(e) => { e.stopPropagation(); setShowSN(row.sku); }}
-                                className="p-1 hover:bg-primary/10 rounded-md text-primary transition-colors"
+                                className="p-0.5 hover:bg-primary/10 rounded-md text-primary transition-colors flex items-center justify-center"
                                 title="Xem chi tiết S/N"
                               >
                                 <span className="material-icons-round text-sm">visibility</span>

@@ -24,19 +24,16 @@ const navItems: NavItem[] = [
     id: 'grp_inbound', label: '1. Đơn nhập', icon: 'login'
   },
   { 
-    id: 'grp_proc', label: '2. Xử lý đơn', icon: 'fact_check',
+    id: 'grp_outbound', label: '2. Đơn xuất', icon: 'logout',
     children: [
-      { id: 'orders', label: 'Danh sách đơn', icon: 'list_alt' },
+      { id: 'grp_outbound', label: 'Danh sách đơn', icon: 'receipt_long' },
       { id: 'proc_pick', label: 'Soạn đơn', icon: 'panning_alt' },
       { id: 'proc_pack', label: 'Đóng gói', icon: 'inventory_2' },
       { id: 'proc_route', label: 'Xếp tuyến', icon: 'fork_right' },
     ]
   },
   { 
-    id: 'grp_outbound', label: '3. Đơn xuất', icon: 'logout'
-  },
-  { 
-    id: 'grp_warehouse', label: '4. Kho hàng', icon: 'warehouse',
+    id: 'grp_warehouse', label: '3. Kho hàng', icon: 'warehouse',
     children: [
       { id: 'wh_list', label: 'Danh sách kho', icon: 'list' },
       { id: 'rackMap', label: 'Sơ đồ kho', icon: 'map' },
@@ -44,7 +41,7 @@ const navItems: NavItem[] = [
     ]
   },
   { 
-    id: 'grp_report', label: '5. Báo cáo', icon: 'analytics',
+    id: 'grp_report', label: '4. Báo cáo', icon: 'analytics',
     children: [
       { id: 'rpt_inbound', label: 'Báo cáo nhập', icon: 'summarize' },
       { id: 'rpt_proc', label: 'BC xử lý đơn', icon: 'fact_check' },
@@ -53,7 +50,7 @@ const navItems: NavItem[] = [
     ]
   },
   { 
-    id: 'grp_operation', label: '6. Vận hành', icon: 'settings_suggest',
+    id: 'grp_operation', label: '5. Vận hành', icon: 'settings_suggest',
     children: [
       { id: 'op_split', label: 'Rã hàng chẵn', icon: 'call_split' },
       { id: 'op_repack', label: 'Đóng gói lại', icon: 'package_2' },
@@ -63,7 +60,7 @@ const navItems: NavItem[] = [
     ]
   },
   { 
-    id: 'grp_hr', label: '7. Nhân sự', icon: 'badge',
+    id: 'grp_hr', label: '6. Nhân sự', icon: 'badge',
     children: [
       { id: 'hr_staff_list', label: 'DS nhân viên', icon: 'people' },
       { id: 'hr_salary_level', label: 'Cấp bậc lương', icon: 'grade' },
@@ -73,7 +70,7 @@ const navItems: NavItem[] = [
     ]
   },
   { 
-    id: 'grp_finance', label: '8. Tài chính', icon: 'payments',
+    id: 'grp_finance', label: '7. Tài chính', icon: 'payments',
     children: [
       { id: 'fin_wh', label: 'Chi phí kho', icon: 'business' },
       { id: 'fin_op', label: 'Chi phí vận hành', icon: 'engineering' },
@@ -83,7 +80,7 @@ const navItems: NavItem[] = [
     ]
   },
   {
-    id: 'grp_master', label: '9. Danh mục', icon: 'dataset',
+    id: 'grp_master', label: '8. Danh mục', icon: 'dataset',
     children: [
       { id: 'product_list',   label: 'Sản phẩm',      icon: 'inventory_2' },
       { id: 'supplier_list',  label: 'Nhà cung cấp',  icon: 'local_shipping' },
@@ -91,7 +88,7 @@ const navItems: NavItem[] = [
     ]
   },
   { 
-    id: 'grp_settings', label: '10. Cài đặt', icon: 'settings',
+    id: 'grp_settings', label: '9. Cài đặt', icon: 'settings',
     children: [
       { id: 'staffAdmin', label: 'Nhân viên', icon: 'manage_accounts' },
       { id: 'set_permissions', label: 'Phân quyền', icon: 'security' },
@@ -115,7 +112,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
   // Auto-expand menu containing active page
   React.useEffect(() => {
     navItems.forEach(item => {
-      if (item.children?.some(child => child.id === activePage)) {
+      if (item.children?.some(child => child.id === activePage) || item.id === activePage) {
         setExpandedMenu(item.id as string);
       }
     });
@@ -139,7 +136,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
     // Mapping structure for permissions
     const moduleMapping: Record<string, string> = {
       'grp_inbound': 'inbound',
-      'grp_proc': 'orders',
       'grp_outbound': 'outbound',
       'grp_warehouse': 'inventory',
       'grp_report': 'reports',
@@ -223,7 +219,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
                 <button
                   onClick={() => {
                     if (hasChildren) {
-                      setExpandedMenu(isExpanded ? null : (item.id as string));
+                      const willExpand = !isExpanded;
+                      setExpandedMenu(willExpand ? (item.id as string) : null);
+                      if (willExpand && item.children && item.children.length > 0) {
+                        handlePageChange(item.children[0].id as PageType);
+                      }
                     } else {
                       handlePageChange(item.id as PageType);
                     }

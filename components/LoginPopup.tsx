@@ -18,40 +18,36 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onLoginSuccess }) => {
     setError(null);
 
     try {
-      // Step 1: Query users table for the phone number
-      const { data: user, error: userError } = await supabase
-        .from(TABLE('users'))
-        .select('*')
-        .eq('phone', phone)
-        .single();
+      // Step 1: Login qua RPC (bypass RLS, kiểm tra phone + pass trong DB)
+      const { data: users, error: loginError } = await supabase
+        .rpc('login', { p_phone: phone, p_pass: password });
 
-      if (userError || !user) {
-        throw new Error('Số điện thoại không tồn tại');
+      if (loginError) throw new Error('Đã xảy ra lỗi khi đăng nhập');
+
+      if (!users || users.length === 0) {
+        throw new Error('Số điện thoại hoặc mật khẩu không đúng');
       }
 
-      // Step 2: Check password (In production, use hashed passwords)
-      if (user.pass !== password) {
-        throw new Error('Mật khẩu không chính xác');
-      }
+      const user = users[0];
 
-      // Step 2.5: Verify Website Access (Multi-tenancy)
+      // Step 2: Verify Website Access
       const allowedWebsites = Array.isArray(user.website_id) ? user.website_id : [];
-      
-      // If website_id mảng is empty, assume they have no access or we want to allow login?
-      // User requested to check if current website_id is in the array.
       if (!allowedWebsites.includes(APP_CONFIG.WEBSITE_ID)) {
         throw new Error(`Tài khoản không có quyền truy cập vào ${APP_CONFIG.WEBSITE_NAME}`);
       }
 
-      // Step 3: Fetch staff profile for permissions
+      // Step 3: Set RLS session
+      await supabase.rpc('set_app_user', { uid: user.id });
+
+      // Step 4: Fetch staff profile for permissions
       const { data: staffProfile, error: profileError } = await supabase
         .from(TABLE('staff_profiles'))
         .select('*')
         .eq('user_id', user.id)
         .single();
 
-      if (profileError && profileError.code !== 'PGRST116') { // PGRST116 is "no rows found"
-         console.error('Error fetching staff profile:', profileError);
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.error('Error fetching staff profile:', profileError);
       }
 
       const userData = {
@@ -61,7 +57,6 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onLoginSuccess }) => {
         allowedModules: staffProfile?.allowed_modules || []
       };
 
-      // Store in localStorage for persistence
       localStorage.setItem('wms_user', JSON.stringify(userData));
       onLoginSuccess(userData);
       

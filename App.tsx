@@ -32,6 +32,14 @@ import InboundReturn from './pages/InboundReturn';
 import InternalProcess from './pages/InternalProcess';
 import InboundManager from './pages/InboundManager';
 import OutboundManager from './pages/OutboundManager';
+import InboundReport from './pages/InboundReport';
+import ProcessReport from './pages/ProcessReport';
+import OutboundReport from './pages/OutboundReport';
+import OpSplit from './pages/OpSplit';
+import OpRepack from './pages/OpRepack';
+import OpAudit from './pages/OpAudit';
+import OpReplenish from './pages/OpReplenish';
+import OpTransfer from './pages/OpTransfer';
 
 const App: React.FC = () => {
   const [activePage, setActivePage] = useState<PageType>('dashboard');
@@ -63,8 +71,8 @@ const App: React.FC = () => {
       case 'costs': return <CostAnalysis />;
       case 'rackMap': return <RackMap />;
       case 'putAway': return <PutAway />;
-      case 'orders': return <OrderList onViewDetail={(id) => { setSelectedOrderCode(id); setActivePage('orderDetail'); }} />;
-      case 'orderDetail': return <OrderDetail orderCode={selectedOrderCode} onBack={() => setActivePage('orders')} />;
+      case 'orders': return <OutboundManager onViewDetail={(id) => { setSelectedOrderCode(id); setActivePage('orderDetail'); }} />;
+      case 'orderDetail': return <OrderDetail orderCode={selectedOrderCode} onBack={() => setActivePage('grp_outbound')} />;
       case 'taskProgress': return <TaskProgress />;
       case 'staffCheckIn': return <StaffCheckIn onExit={() => setActivePage('dashboard')} user={user} />;
       case 'staffAdmin': return <StaffAdmin />;
@@ -79,7 +87,7 @@ const App: React.FC = () => {
       case 'inbound_internal': return <InboundManager onReceive={(code) => { setSelectedPOCode(code); setActivePage('inbound_receive'); }} initialTab="inbound_internal" />;
       
       // Xử lý đơn
-      case 'proc_list': return <OrderList onViewDetail={(id) => { setSelectedOrderCode(id); setActivePage('orderDetail'); }} />;
+      case 'proc_list': return <OutboundManager onViewDetail={(id) => { setSelectedOrderCode(id); setActivePage('orderDetail'); }} />;
       case 'proc_pick': return <Picking />;
       case 'proc_pack': return <Packing />;
       case 'proc_route': return <Routing />;
@@ -101,17 +109,17 @@ const App: React.FC = () => {
       case 'wh_stock': return <ComingSoon title="Tồn kho" />;
       
       // Báo cáo
-      case 'rpt_inbound': return <ComingSoon title="Báo cáo nhập" />;
-      case 'rpt_proc': return <ComingSoon title="BC xử lý đơn" />;
-      case 'rpt_outbound': return <ComingSoon title="BC xuất" />;
+      case 'rpt_inbound': return <InboundReport />;
+      case 'rpt_proc': return <ProcessReport />;
+      case 'rpt_outbound': return <OutboundReport />;
+      case 'rpt_xnt': return <InventoryReport />;
 
-      
       // Vận hành
-      case 'op_split': return <ComingSoon title="Rã hàng chẵn" />;
-      case 'op_repack': return <ComingSoon title="Đóng gói lại" />;
-      case 'op_audit': return <ComingSoon title="Kiểm kê kho" />;
-      case 'op_replenish': return <ComingSoon title="Châm hàng" />;
-      case 'op_transfer': return <ComingSoon title="Luân chuyển" />;
+      case 'op_split': return <OpSplit />;
+      case 'op_repack': return <OpRepack />;
+      case 'op_audit': return <OpAudit />;
+      case 'op_replenish': return <OpReplenish />;
+      case 'op_transfer': return <OpTransfer />;
       
       // Tài chính
       case 'fin_wh': return <ComingSoon title="Chi phí kho" />;

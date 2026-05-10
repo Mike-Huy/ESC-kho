@@ -366,26 +366,26 @@ const SupplierList: React.FC = () => {
                   <tbody className="divide-y divide-slate-100">
                     {suppliers.map((supplier, idx) => (
                       <tr key={idx} className="hover:bg-slate-50 transition-colors group">
-                        <td className="px-6 py-1 font-mono text-xs text-primary font-bold">
+                        <td className="px-6 py-0.5 font-mono text-xs text-primary font-bold">
                           {supplier.supplier_code}
                         </td>
-                        <td className="px-6 py-1">
-                          <div className="font-bold text-slate-700 text-[13px]">{supplier.supplier_name}</div>
-                          <div className="text-[11px] text-slate-400 font-semibold">{supplier.address}</div>
+                        <td className="px-6 py-0.5">
+                          <div className="font-bold text-slate-700 text-[13px] leading-tight py-0.5">{supplier.supplier_name}</div>
+                          <div className="text-[11px] text-slate-400 font-semibold leading-tight">{supplier.address}</div>
                         </td>
-                        <td className="px-6 py-1 text-slate-500 text-xs font-semibold">
+                        <td className="px-6 py-0.5 text-slate-500 text-xs font-semibold">
                           {supplier.phone || '---'}
                         </td>
-                        <td className="px-6 py-1 text-slate-500 text-xs font-semibold">
-                          {supplier.contact_person || '---'}
+                        <td className="px-6 py-0.5 text-slate-500 text-xs font-semibold">
+                          <div className="font-semibold leading-tight">{supplier.contact_person || '---'}</div>
                           {supplier.contact_phone && (
-                            <div className="text-[10px] text-slate-400 font-medium">{supplier.contact_phone}</div>
+                            <div className="text-[10px] text-slate-400 font-medium leading-none mt-0.5">{supplier.contact_phone}</div>
                           )}
                         </td>
-                        <td className="px-6 py-1 text-center text-slate-700 text-xs font-bold">
+                        <td className="px-6 py-0.5 text-center text-slate-700 text-xs font-bold">
                           {supplier.payment_terms} ngày
                         </td>
-                        <td className="px-6 py-1 text-center">
+                        <td className="px-6 py-0.5 text-center">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                             supplier.status === 'active' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'
                           }`}>

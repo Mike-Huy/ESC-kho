@@ -57,7 +57,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ orderCode, onBack }) => {
               sn_control
             )
           `)
-          .eq('so_id', soData.id);
+          .eq('so_code', orderCode);
         
         if (itemError) throw itemError;
 

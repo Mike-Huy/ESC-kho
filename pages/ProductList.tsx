@@ -342,33 +342,35 @@ const ProductList: React.FC = () => {
                 <tbody className="divide-y divide-slate-100">
                   {products.map((product) => (
                     <tr key={product.id} className="hover:bg-slate-50 transition-colors group">
-                      <td className="px-6 py-1 font-mono text-xs text-primary font-bold">
+                      <td className="px-6 py-0.5 font-mono text-xs text-primary font-bold">
                         {product.product_code}
                       </td>
-                      <td className="px-6 py-1">
-                        <div className="font-bold text-slate-700 text-[13px]">{product.product_long}</div>
+                      <td className="px-6 py-0.5">
+                        <div className="font-bold text-slate-700 text-[13px] leading-tight py-0.5">{product.product_long}</div>
                       </td>
-                      <td className="px-6 py-1 text-slate-500 text-xs font-semibold">
+                      <td className="px-6 py-0.5 text-slate-500 text-xs font-semibold">
                         {product.unit}
                       </td>
-                      <td className="px-6 py-1 text-center">
-                        <button
-                          onClick={() => toggleSNControl(product.id, product.sn_control)}
-                          className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                            product.sn_control ? 'bg-primary' : 'bg-slate-200'
-                          }`}
-                        >
-                          <span
-                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                              product.sn_control ? 'translate-x-4' : 'translate-x-0'
+                      <td className="px-6 py-0.5 text-center">
+                        <div className="flex flex-col items-center justify-center -space-y-0.5 py-0.5">
+                          <button
+                            onClick={() => toggleSNControl(product.id, product.sn_control)}
+                            className={`relative inline-flex h-4 w-7 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                              product.sn_control ? 'bg-primary' : 'bg-slate-200'
                             }`}
-                          />
-                        </button>
-                        <div className={`text-[9px] font-bold ${product.sn_control ? 'text-primary' : 'text-slate-400'}`}>
-                          {product.sn_control ? 'S/N' : 'TẮT'}
+                          >
+                            <span
+                              className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                product.sn_control ? 'translate-x-3' : 'translate-x-0'
+                              }`}
+                            />
+                          </button>
+                          <div className={`text-[9px] font-bold leading-none ${product.sn_control ? 'text-primary' : 'text-slate-400'}`}>
+                            {product.sn_control ? 'S/N' : 'TẮT'}
+                          </div>
                         </div>
                       </td>
-                      <td className="px-6 py-1 text-center">
+                      <td className="px-6 py-0.5 text-center">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                           product.status ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'
                         }`}>

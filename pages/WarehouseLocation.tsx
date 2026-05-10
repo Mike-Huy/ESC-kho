@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, TABLE } from '../supabaseClient';
 import { APP_CONFIG } from '../appConfig';
 
 type TabType = 'warehouse' | 'location';
@@ -19,14 +19,14 @@ const WarehouseLocation: React.FC = () => {
       setLoading(true);
       if (activeTab === 'warehouse') {
         const { data, error } = await supabase
-          .from('warehouse')
+          .from(TABLE('warehouse'))
           .select('*')
           .order('id', { ascending: true });
         if (error) throw error;
         setWarehouses(data || []);
       } else {
         const { data, error } = await supabase
-          .from('wh_location')
+          .from(TABLE('wh_location'))
           .select('*')
           .contains('website_id', [APP_CONFIG.WEBSITE_ID])
           .order('location_code', { ascending: true });

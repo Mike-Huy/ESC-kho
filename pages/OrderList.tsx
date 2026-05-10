@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Order } from '../types';
 import { supabase, TABLE } from '../supabaseClient';
 import { APP_CONFIG } from '../appConfig';
+import * as XLSX from 'xlsx';
 
 interface OrderListProps {
   onViewDetail: (id: string) => void;
@@ -23,6 +24,334 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail, statusFilter = '', 
   const [isUsingMock, setIsUsingMock] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [groupedImportSOs, setGroupedImportSOs] = useState<any[]>([]);
+  const [showImportModal, setShowImportModal] = useState(false);
+
+  const parseExcelDate = (val: any): string | undefined => {
+    if (!val) return undefined;
+    if (val instanceof Date) {
+      return val.toISOString().split('T')[0];
+    }
+    if (typeof val === 'number') {
+      const date = new Date((val - 25569) * 86400 * 1000);
+      return date.toISOString().split('T')[0];
+    }
+    const str = String(val).trim();
+    if (!str) return undefined;
+    
+    // Support dd-mm-yyyy, dd/mm/yyyy, dd.mm.yyyy by normalizing separators to '/'
+    const cleanStr = str.replace(/[-.]/g, '/');
+    const parts = cleanStr.split('/');
+    if (parts.length === 3) {
+      const d = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1;
+      const y = parseInt(parts[2], 10);
+      if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
+        const fullYear = y < 100 ? 2000 + y : y;
+        const date = new Date(fullYear, m, d);
+        if (!isNaN(date.getTime())) {
+          return date.toISOString().split('T')[0];
+        }
+      }
+    }
+    const parsed = Date.parse(str);
+    if (!isNaN(parsed)) {
+      return new Date(parsed).toISOString().split('T')[0];
+    }
+    return undefined;
+  };
+
+  const downloadTemplate = () => {
+    const data = [
+      [
+        "Mã đơn bán (so_code)", 
+        "Tên khách hàng (customer_name)", 
+        "SĐT khách hàng (customer_phone)", 
+        "Địa chỉ giao hàng (delivery_address)", 
+        "Ngày đặt hàng (order_date)", 
+        "Mã sản phẩm (product_code)", 
+        "Số lượng (qty)", 
+        "Đơn giá bán (unit_price)"
+      ],
+      [
+        "SO-20260510-001", 
+        "Nguyễn Minh Tuấn", 
+        "0909123456", 
+        "123 Nguyễn Trãi, Q1, TP.HCM", 
+        "10-05-2026", 
+        "SP001", 
+        5, 
+        120000
+      ],
+      [
+        "SO-20260510-001", 
+        "Nguyễn Minh Tuấn", 
+        "0909123456", 
+        "123 Nguyễn Trãi, Q1, TP.HCM", 
+        "10-05-2026", 
+        "SP002", 
+        2, 
+        250000
+      ],
+      [
+        "SO-20260510-002", 
+        "Công ty TNHH ABC", 
+        "0283838383", 
+        "456 Lê Lợi, Q.Tân Bình, TP.HCM", 
+        "09-05-2026", 
+        "SP003", 
+        10, 
+        85000
+      ]
+    ];
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "MauDonBanSO");
+    XLSX.writeFile(workbook, "mau_nhap_don_ban_so.xlsx");
+  };
+
+  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const dataBytes = evt.target?.result;
+        if (!dataBytes) return;
+
+        const workbook = XLSX.read(dataBytes, { type: 'array', cellDates: true });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        
+        const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '' });
+        if (rows.length === 0) {
+          alert('Tải file không thành công hoặc file trống!');
+          return;
+        }
+
+        const parsedRows: { 
+          so_code: string; 
+          customer_name: string; 
+          customer_phone: string; 
+          delivery_address: string; 
+          order_date: string; 
+          product_code: string; 
+          qty: number; 
+          unit_price: number; 
+        }[] = [];
+
+        let startIndex = 0;
+        const firstRow = rows[0] || [];
+        const firstCell = String(firstRow[0] || '').toLowerCase();
+        if (
+          firstCell.includes('mã') || 
+          firstCell.includes('code') || 
+          firstCell.includes('sản phẩm') || 
+          firstCell.includes('khách') || 
+          firstCell.includes('customer')
+        ) {
+          startIndex = 1;
+        }
+
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        for (let i = startIndex; i < rows.length; i++) {
+          const parts = rows[i] || [];
+          if (parts.length >= 2) {
+            const fileSo = String(parts[0] || '').trim();
+            const custName = String(parts[1] || '').trim();
+            const custPhone = String(parts[2] || '').trim();
+            const delivAddr = String(parts[3] || '').trim();
+            
+            const rawDate = parts[4];
+            const parsedDate = parseExcelDate(rawDate) || todayStr;
+            
+            const prodCode = String(parts[5] || '').trim();
+            const qty = parseInt(String(parts[6] || '1'), 10) || 1;
+            const price = parseFloat(String(parts[7] || '0')) || 0;
+
+            if (fileSo && prodCode) {
+              parsedRows.push({ 
+                so_code: fileSo, 
+                customer_name: custName, 
+                customer_phone: custPhone, 
+                delivery_address: delivAddr, 
+                order_date: parsedDate, 
+                product_code: prodCode, 
+                qty, 
+                unit_price: price 
+              });
+            }
+          }
+        }
+
+        if (parsedRows.length === 0) {
+          alert('Không tìm thấy dữ liệu hợp lệ trong file. Vui lòng tải file mẫu để xem định dạng!');
+          return;
+        }
+
+        // Fetch products information to validate product_code
+        const codes = Array.from(new Set(parsedRows.map(r => r.product_code)));
+        const { data: dbProducts, error } = await supabase
+          .from(TABLE('product'))
+          .select('product_code, product_long, unit, sell_price')
+          .contains('website_id', [APP_CONFIG.WEBSITE_ID])
+          .in('product_code', codes);
+
+        if (error) throw error;
+
+        const dbProductsMap = new Map<string, any>();
+        dbProducts?.forEach(p => {
+          dbProductsMap.set(p.product_code.toLowerCase(), p);
+        });
+
+        // Group rows by so_code
+        const groupsMap = new Map<string, any>();
+        
+        parsedRows.forEach(row => {
+          const key = row.so_code;
+          const dbProd = dbProductsMap.get(row.product_code.toLowerCase());
+          
+          let soGroup = groupsMap.get(key);
+          if (!soGroup) {
+            soGroup = {
+              so_code: row.so_code,
+              customer_name: row.customer_name || 'Khách vãng lai',
+              customer_phone: row.customer_phone || '',
+              delivery_address: row.delivery_address || 'Nhận tại kho',
+              order_date: row.order_date,
+              items: []
+            };
+            groupsMap.set(key, soGroup);
+          }
+
+          if (dbProd) {
+            soGroup.items.push({
+              product_code: dbProd.product_code,
+              qty: row.qty,
+              unit_price: row.unit_price || dbProd.sell_price || 0,
+              name: dbProd.product_long,
+              unit: dbProd.unit,
+              isValid: true
+            });
+          } else {
+            soGroup.items.push({
+              product_code: row.product_code,
+              qty: row.qty,
+              unit_price: row.unit_price || 0,
+              isValid: false,
+              errorMsg: 'Mã sản phẩm không tồn tại'
+            });
+          }
+        });
+
+        const finalGroups = Array.from(groupsMap.values());
+        setGroupedImportSOs(finalGroups);
+        setShowImportModal(true);
+      } catch (err: any) {
+        console.error('Error importing file:', err);
+        alert(`Lỗi khi đọc file: ${err.message}`);
+      } finally {
+        e.target.value = '';
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const confirmImport = async () => {
+    try {
+      setLoading(true);
+      
+      const validGroups = groupedImportSOs.map(g => ({
+        ...g,
+        items: g.items.filter((item: any) => item.isValid)
+      })).filter(g => g.items.length > 0);
+
+      if (validGroups.length === 0) {
+        alert('Không có đơn hàng bán hoặc sản phẩm nào hợp lệ để nhập!');
+        return;
+      }
+
+      // Check which so_code already exist in DB to delete/overwrite
+      const soCodes = validGroups.map((g: any) => g.so_code);
+      const { data: existingSOs } = await supabase
+        .from(TABLE('so'))
+        .select('so_code')
+        .in('so_code', soCodes);
+      const existingCodes = new Set((existingSOs || []).map((r: any) => r.so_code));
+
+      // Overwrite duplicate orders
+      if (existingCodes.size > 0) {
+        const dupList = Array.from(existingCodes) as string[];
+        await supabase.from(TABLE('stock_movement')).delete().eq('ref_type', 'SO').in('ref_code', dupList);
+        await supabase.from(TABLE('serial_tracking')).update({ so_code: null, status: 'available' }).in('so_code', dupList);
+        await supabase.from(TABLE('so_items')).delete().in('so_code', dupList);
+        await supabase.from(TABLE('so')).delete().in('so_code', dupList);
+      }
+
+      // Save SOs and their details
+      for (const group of validGroups) {
+        let subtotal = 0;
+        group.items.forEach((item: any) => {
+          subtotal += item.qty * item.unit_price;
+        });
+        const total_amount = subtotal;
+
+        const { error: soError } = await supabase
+          .from(TABLE('so'))
+          .insert([{
+            so_code: group.so_code,
+            customer_name: group.customer_name,
+            customer_phone: group.customer_phone,
+            delivery_address: group.delivery_address,
+            status: 'pending',
+            order_date: group.order_date,
+            subtotal,
+            total_amount,
+            website_id: [APP_CONFIG.WEBSITE_ID]
+          }]);
+
+        if (soError) {
+          throw new Error(`Lỗi tạo đơn SO ${group.so_code}: ${soError.message}`);
+        }
+
+        const soItems = group.items.map((item: any) => ({
+          so_code: group.so_code,
+          product_code: item.product_code,
+          qty: item.qty,
+          unit: item.unit || 'Cái',
+          unit_price: item.unit_price,
+          total_price: item.qty * item.unit_price
+        }));
+        
+        const { error: itemError } = await supabase
+          .from(TABLE('so_items'))
+          .insert(soItems);
+          
+        if (itemError) {
+          throw new Error(`Lỗi thêm sản phẩm cho đơn SO ${group.so_code}: ${itemError.message}`);
+        }
+      }
+
+      const overwriteCount = existingCodes.size;
+      const newCount = validGroups.length - overwriteCount;
+      const msg = overwriteCount > 0
+        ? `Nhập file thành công! Đã tạo mới ${newCount} đơn SO, ghi đè ${overwriteCount} đơn trùng.`
+        : `Nhập file thành công! Đã tạo ${validGroups.length} đơn hàng SO mới vào hệ thống.`;
+      alert(msg);
+      setShowImportModal(false);
+      setGroupedImportSOs([]);
+      fetchOrders();
+    } catch (err: any) {
+      console.error('Error confirming import:', err);
+      alert(err.message || 'Lỗi hệ thống khi lưu đơn SO.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchOrders = async () => {
     try {
       setLoading(true);
@@ -31,15 +360,15 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail, statusFilter = '', 
         .from(TABLE('so'))
         .select(`
           *,
-          so_items!inner(
-            product!inner(brand, website_id)
+          ${TABLE('so_items')}!inner(
+            ${TABLE('product')}!inner(brand, website_id)
           )
         `);
 
       // Filter by website_id and product visibility
       query = query
         .contains('website_id', [APP_CONFIG.WEBSITE_ID])
-        .filter('so_items.product.website_id', 'cs', `{${APP_CONFIG.WEBSITE_ID}}`);
+        .filter(`${TABLE('so_items')}.${TABLE('product')}.website_id`, 'cs', `{${APP_CONFIG.WEBSITE_ID}}`);
 
       // Filter by statusFilter
       if (statusFilter === 'pending_proc') {
@@ -135,38 +464,89 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail, statusFilter = '', 
   };
 
   return (
-    <div className={`${hideHeader ? 'p-6 lg:p-10 max-w-7xl' : 'max-w-[1600px] p-8'} mx-auto animate-in fade-in duration-500`}>
-      {!hideHeader && (
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+    <div className={`${hideHeader ? 'p-6 lg:p-10 max-w-7xl' : 'max-w-[1600px] p-6 pt-4'} mx-auto animate-in fade-in duration-500`}>
+      {!hideHeader ? (
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
           <div className="space-y-1">
             <h2 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
                DANH SÁCH ĐƠN HÀNG
-              {isUsingMock && <span className="text-[9px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-md border border-amber-200 font-black uppercase tracking-widest">Demo</span>}
             </h2>
             <p className="text-slate-500 text-sm font-bold uppercase tracking-widest">Quản lý và vận hành đơn hàng (SO)</p>
           </div>
-          <button className="bg-primary hover:bg-blue-700 text-white px-8 py-4 rounded-2xl flex items-center justify-center gap-2 font-black transition-all shadow-xl shadow-primary/20 active:scale-95 uppercase text-sm tracking-widest">
-            <span className="material-icons-round text-lg">add_circle</span>
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Excel Template Button */}
+            <button 
+              onClick={downloadTemplate}
+              className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 px-5 py-3 rounded-2xl text-xs font-black flex items-center justify-center gap-2 transition-all shadow-md hover:border-slate-300 uppercase tracking-widest active:scale-95"
+              title="Tải tệp mẫu Excel/CSV để nhập liệu"
+            >
+              <span className="material-icons-round text-base text-emerald-600">file_download</span>
+              <span>Excel Template</span>
+            </button>
+            
+            {/* Excel Import Button */}
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-5 py-3 rounded-2xl text-xs font-black flex items-center justify-center gap-2 transition-all shadow-md uppercase tracking-widest active:scale-95"
+              title="Nhập danh sách đơn bán từ file Excel/CSV"
+            >
+              <span className="material-icons-round text-base">file_upload</span>
+              <span>Excel Import</span>
+            </button>
+            
+            <button className="bg-primary hover:bg-blue-700 text-white px-8 py-3 rounded-2xl flex items-center justify-center gap-2 font-black transition-all shadow-xl shadow-primary/20 active:scale-95 uppercase text-xs tracking-widest">
+              <span className="material-icons-round text-sm">add_circle</span>
+              <span>Tạo đơn SO mới</span>
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center justify-end gap-3 mb-4">
+          {/* Excel Template Button */}
+          <button 
+            onClick={downloadTemplate}
+            className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 px-4 py-2 rounded-2xl text-xs font-black flex items-center justify-center gap-2 transition-all shadow-md hover:border-slate-300 uppercase tracking-widest active:scale-95"
+            title="Tải tệp mẫu Excel/CSV để nhập liệu"
+          >
+            <span className="material-icons-round text-base text-emerald-600">file_download</span>
+            <span>Excel Template</span>
+          </button>
+          
+          {/* Excel Import Button */}
+          <button 
+            onClick={() => fileInputRef.current?.click()}
+            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-4 py-2 rounded-2xl text-xs font-black flex items-center justify-center gap-2 transition-all shadow-md uppercase tracking-widest active:scale-95"
+            title="Nhập danh sách đơn bán từ file Excel/CSV"
+          >
+            <span className="material-icons-round text-base">file_upload</span>
+            <span>Excel Import</span>
+          </button>
+          
+          <button className="bg-primary hover:bg-blue-700 text-white px-6 py-2 rounded-2xl flex items-center justify-center gap-2 font-black transition-all shadow-xl shadow-primary/20 active:scale-95 uppercase text-xs tracking-widest">
+            <span className="material-icons-round text-sm">add_circle</span>
             <span>Tạo đơn SO mới</span>
           </button>
         </div>
       )}
 
-      <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/50 mb-8">
-        <form onSubmit={handleSearch} className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-6 relative group">
+      <div className="bg-white p-3 px-6 rounded-2xl border border-slate-100 shadow-xl shadow-slate-200/50 mb-4">
+        <form onSubmit={handleSearch} className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+          <div className="lg:col-span-8 relative group">
             <span className="material-icons-round absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">search</span>
             <input 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-primary outline-none text-sm font-bold transition-all" 
+              className="w-full pl-12 pr-28 py-2.5 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-primary outline-none text-sm font-bold transition-all" 
               placeholder="Tìm theo Mã đơn SO hoặc Tên khách hàng..." 
               type="text" 
             />
+            <button type="submit" className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-slate-900 text-white rounded-xl px-4 py-1.5 font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-sm">
+              Tìm kiếm
+            </button>
           </div>
           <div className="lg:col-span-3 relative">
              <span className="material-icons-round absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">filter_list</span>
-             <select className="w-full pl-12 pr-10 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-primary outline-none text-sm font-bold appearance-none cursor-pointer transition-all">
+             <select className="w-full pl-12 pr-10 py-2.5 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-primary outline-none text-sm font-bold appearance-none cursor-pointer transition-all">
                 <option value="">Trạng thái</option>
                 <option value="pending">Mới (Pending)</option>
                 <option value="processing">Đang xử lý</option>
@@ -174,9 +554,8 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail, statusFilter = '', 
              </select>
              <span className="material-icons-round absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
           </div>
-          <div className="lg:col-span-3 flex gap-3">
-             <button type="submit" className="flex-1 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 transition-all">Tìm kiếm</button>
-             <button className="w-14 h-14 border-2 border-slate-100 bg-white hover:bg-slate-50 rounded-2xl flex items-center justify-center transition-all text-slate-400 hover:text-primary">
+          <div className="lg:col-span-1 flex justify-end">
+             <button className="w-10 h-10 border-2 border-slate-100 bg-white hover:bg-slate-50 rounded-xl flex items-center justify-center transition-all text-slate-400 hover:text-primary" title="Tải xuống danh sách">
                 <span className="material-icons-round">file_download</span>
              </button>
           </div>
@@ -194,18 +573,18 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail, statusFilter = '', 
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 text-slate-400 text-[11px] uppercase tracking-[0.2em] font-black border-b border-slate-100">
-                <th className="px-8 py-6">Mã đơn SO</th>
-                <th className="px-8 py-6">Khách hàng</th>
-                <th className="px-8 py-6 text-center">Trạng thái</th>
-                <th className="px-8 py-6">Ngày đặt hàng</th>
-                <th className="px-8 py-6 text-right">Tổng giá trị</th>
-                <th className="px-8 py-6 text-center">Thao tác</th>
+                <th className="px-6 py-2">Mã đơn SO</th>
+                <th className="px-6 py-2">Khách hàng</th>
+                <th className="px-6 py-2 text-center">Trạng thái</th>
+                <th className="px-6 py-2">Ngày đặt hàng</th>
+                <th className="px-6 py-2 text-right">Tổng giá trị</th>
+                <th className="px-6 py-2 text-center">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {orders.length === 0 ? (
                 <tr>
-                   <td colSpan={6} className="px-8 py-20 text-center">
+                   <td colSpan={6} className="px-6 py-10 text-center">
                       <div className="flex flex-col items-center opacity-30">
                         <span className="material-icons-round text-6xl mb-4">inventory_2</span>
                         <p className="font-black uppercase tracking-widest text-sm">Không có dữ liệu</p>
@@ -213,37 +592,181 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail, statusFilter = '', 
                    </td>
                 </tr>
               ) : (
-              orders.map((order, idx) => (
-                <tr key={idx} className="group hover:bg-slate-50/50 transition-all duration-300">
-                  <td className="px-8 py-6">
-                    <span className="font-black text-primary text-sm tracking-tight">{order.id}</span>
-                  </td>
-                  <td className="px-8 py-6">
-                    <div className="flex flex-col">
-                      <span className="font-black text-slate-800 text-sm">{order.customer}</span>
-                      <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">{order.email}</span>
-                    </div>
-                  </td>
-                  <td className="px-8 py-6 text-center">{getStatusBadge(order.status)}</td>
-                  <td className="px-8 py-6 text-[12px] text-slate-500 font-black">{order.date}</td>
-                  <td className="px-8 py-6 text-right">
-                    <span className={`text-sm font-black ${order.status === 'cancelled' ? 'text-slate-300 line-through' : 'text-slate-900 font-black'}`}>
-                      {order.total}
-                    </span>
-                  </td>
-                  <td className="px-8 py-6">
-                    <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
-                       <button onClick={() => onViewDetail(order.id)} className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm"><span className="material-icons-round text-xl">visibility</span></button>
-                       <button className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm"><span className="material-icons-round text-xl">edit</span></button>
-                    </div>
-                  </td>
-                </tr>
-              )))}
+                orders.map((order, idx) => (
+                  <tr key={idx} className="group hover:bg-slate-50/50 transition-all duration-300">
+                    <td className="px-6 py-0.5">
+                      <span className="font-black text-primary text-sm tracking-tight leading-none">{order.id}</span>
+                    </td>
+                    <td className="px-6 py-0.5">
+                      <span className="font-black text-slate-800 text-sm leading-none">{order.customer}</span>
+                    </td>
+                    <td className="px-6 py-0.5 text-center">{getStatusBadge(order.status)}</td>
+                    <td className="px-6 py-0.5 text-[12px] text-slate-500 font-black leading-none">{order.date}</td>
+                    <td className="px-6 py-0.5 text-right">
+                      <span className={`text-sm font-black leading-none ${order.status === 'cancelled' ? 'text-slate-300 line-through' : 'text-slate-900 font-black'}`}>
+                        {order.total}
+                      </span>
+                    </td>
+                    <td className="px-6 py-0.5">
+                      <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0 py-0.5">
+                         <button onClick={() => onViewDetail(order.id)} className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm"><span className="material-icons-round text-base">visibility</span></button>
+                         <button className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm"><span className="material-icons-round text-base">edit</span></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
           )}
         </div>
       </div>
+
+      {/* Excel/CSV Import Preview Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden transform transition-all animate-in fade-in zoom-in duration-300 flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="p-5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <span className="material-icons-round">file_upload</span>
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-950 uppercase tracking-tight">Kiểm tra Danh sách Nhập Đơn bán SO</h3>
+                  <p className="text-slate-500 text-xs font-bold uppercase tracking-widest text-[9px] mt-0.5">Xem trước và đối soát mã sản phẩm theo từng đơn hàng bán (SO)</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowImportModal(false)}
+                className="w-8 h-8 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-all"
+              >
+                <span className="material-icons-round text-lg">close</span>
+              </button>
+            </div>
+
+            {/* Modal Body: Stats & Groups */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-slate-50">
+              {/* Quick stats cards */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="p-3 bg-white border border-slate-150 rounded-2xl text-center shadow-sm">
+                  <p className="text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Tổng đơn hàng</p>
+                  <p className="text-slate-900 text-xl font-black mt-1">{groupedImportSOs.length}</p>
+                </div>
+                <div className="p-3 bg-emerald-50/50 border border-emerald-100 rounded-2xl text-center shadow-sm">
+                  <p className="text-emerald-600/70 text-[10px] font-extrabold uppercase tracking-wider">Hợp lệ</p>
+                  <p className="text-emerald-700 text-xl font-black mt-1">
+                    {groupedImportSOs.filter(g => g.items.every((x: any) => x.isValid)).length} đơn
+                  </p>
+                </div>
+                <div className="p-3 bg-rose-50/50 border border-rose-100 rounded-2xl text-center shadow-sm">
+                  <p className="text-rose-600/70 text-[10px] font-extrabold uppercase tracking-wider">Có lỗi mã SP</p>
+                  <p className="text-rose-700 text-xl font-black mt-1">
+                    {groupedImportSOs.filter(g => g.items.some((x: any) => !x.isValid)).length} đơn
+                  </p>
+                </div>
+              </div>
+
+              {/* List of Grouped SO Cards */}
+              <div className="space-y-4">
+                {groupedImportSOs.map((group, gIdx) => {
+                  const hasError = group.items.some((x: any) => !x.isValid);
+                  return (
+                    <div key={gIdx} className={`bg-white border rounded-2xl overflow-hidden shadow-sm transition-all hover:shadow-md ${hasError ? 'border-rose-200' : 'border-slate-150'}`}>
+                      {/* Card Header */}
+                      <div className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b ${hasError ? 'bg-rose-50/30 border-rose-100' : 'bg-slate-50/50 border-slate-100'}`}>
+                        <div className="flex items-center gap-3">
+                          <span className="material-icons-round text-primary text-lg">receipt_long</span>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-black text-sm text-slate-800">{group.so_code}</span>
+                              {hasError ? (
+                                <span className="bg-rose-100 text-rose-700 text-[9px] font-black uppercase px-2 py-0.5 rounded-md">Có lỗi</span>
+                              ) : (
+                                <span className="bg-emerald-100 text-emerald-700 text-[9px] font-black uppercase px-2 py-0.5 rounded-md">Hợp lệ</span>
+                              )}
+                            </div>
+                            <div className="text-xs text-slate-500 font-bold">{group.customer_name} {group.customer_phone ? `(${group.customer_phone})` : ''}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-slate-400 text-[10px] font-extrabold uppercase tracking-wider block">Ngày đơn hàng</span>
+                          <span className="text-slate-700 font-black text-xs">{group.order_date || '--/--/----'}</span>
+                        </div>
+                      </div>
+
+                      {/* Card Body Table */}
+                      <div className="p-3">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead>
+                            <tr className="bg-slate-50/70 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                              <th className="p-2 pl-3">Mã SP</th>
+                              <th className="p-2">Tên sản phẩm</th>
+                              <th className="p-2 text-center">Số lượng</th>
+                              <th className="p-2 text-right">Đơn giá</th>
+                              <th className="p-2 text-right pr-3">Trạng thái</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {group.items.map((item: any, idx: number) => (
+                              <tr key={idx} className="hover:bg-slate-50/30">
+                                <td className="p-2 pl-3 font-mono font-bold text-slate-700">{item.product_code}</td>
+                                <td className="p-2 text-slate-600 font-medium max-w-[200px] truncate">
+                                  {item.isValid ? item.name : <span className="text-rose-500 italic">{item.errorMsg}</span>}
+                                </td>
+                                <td className="p-2 text-center font-bold text-slate-900">{item.qty} {item.unit || 'Cái'}</td>
+                                <td className="p-2 text-right font-bold text-slate-600">
+                                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.unit_price)}
+                                </td>
+                                <td className="p-2 text-right pr-3">
+                                  {item.isValid ? (
+                                    <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold text-[9px]">
+                                      Hợp lệ
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-700 px-2 py-0.5 rounded-full font-bold text-[9px]">
+                                      Lỗi
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+              <button 
+                onClick={() => setShowImportModal(false)}
+                className="px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 font-bold text-xs hover:bg-slate-100 transition-all uppercase tracking-wider"
+              >
+                Hủy bỏ
+              </button>
+              <button 
+                onClick={confirmImport}
+                disabled={groupedImportSOs.length === 0 || groupedImportSOs.every(g => g.items.every((x: any) => !x.isValid)) || loading}
+                className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-black text-xs shadow-lg shadow-emerald-600/25 transition-all flex items-center gap-2 uppercase tracking-wider"
+              >
+                <span className="material-icons-round text-sm">check_circle</span>
+                <span>Đồng ý nhập ({groupedImportSOs.reduce((acc, g) => acc + g.items.filter((x: any) => x.isValid).length, 0)} dòng hợp lệ)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleFileImport} 
+        accept=".xlsx,.xls,.csv" 
+        className="hidden" 
+      />
     </div>
   );
 };

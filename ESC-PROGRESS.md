@@ -373,6 +373,263 @@ Schema `esc_po_items` dùng `po_code VARCHAR` làm FK (không dùng `po_id INTEG
 
 ---
 
+### [2026-05-10] — Nâng cấp giao diện Đơn hàng (SO) và thêm tính năng Excel Template & Excel Import cho Sales Orders
+
+#### Các cải tiến đã hoàn thành:
+1. **Giảm chiều cao các hàng và tinh giản khoảng cách (Row Padding Reduction & Layout Compactness)**:
+   - Thay đổi padding của các ô tiêu đề bảng (`th`) từ `px-8 py-6` sang `px-6 py-2` và các ô dữ liệu (`td`) từ `px-8 py-6` sang `px-6 py-1.5`.
+   - **Loại bỏ hiển thị Email khách hàng (2 dòng) thành hiển thị 1 dòng duy nhất**: Loại bỏ thẻ chứa email (`{order.email}`) bên dưới tên khách hàng trong bảng, nén chiều cao dòng về mức tối thiểu, mang lại giao diện hiển thị gọn gàng, tăng số dòng hiển thị đồng thời trên một màn hình.
+   - Giảm padding của form tìm kiếm / bộ lọc từ `p-4 px-6` sang `p-3 px-6` (với `gap-4`) và lề dưới từ `mb-8` sang `mb-4`.
+   - **Tích hợp nút "Tìm kiếm" vào khung tìm kiếm bên trái**: Dời nút "Tìm kiếm" từ góc phải sang bên trái, lồng trực tiếp vào trong ô nhập liệu (sử dụng định vị absolute) giúp tiết kiệm diện tích tối đa và mang lại sự đồng nhất, tinh xảo tuyệt đối.
+   - Thu hẹp chiều cao của thanh nhập liệu / dropdown từ `py-3` sang `py-2.5` và kích thước nút xuất file thành dạng `w-10 h-10` vừa vặn và đồng điệu nhất.
+   - Giảm lề dưới của khu vực tiêu đề trang từ `mb-12` sang `mb-6`, lề bao ngoài của màn hình từ `p-8` sang `p-6 pt-4`.
+2. **Bỏ chữ DEMO (Removed Demo Badge)**:
+   - Loại bỏ hoàn toàn nhãn `{isUsingMock && <span ...>Demo</span>}` kế bên tiêu đề "DANH SÁCH ĐƠN HÀNG".
+3. **Thêm nút "Excel Template"**:
+   - Tích hợp nút hành động tải tệp mẫu Excel `.xlsx` ngay bên cạnh nút "Tạo đơn SO mới".
+   - Khi click sẽ sinh và tải về tệp bảng tính Excel nhị phân chuẩn (`mau_nhap_don_ban_so.xlsx`) chứa 8 trường thông tin chi tiết của đơn bán SO có sẵn dữ liệu mẫu.
+4. **Thêm nút "Excel Import" và Trình đối soát (Excel Multi-SO Parser & Validation Preview Modal)**:
+   - Thêm nút tải file với hộp chọn chấp nhận `.xlsx`, `.xls`, `.csv`.
+   - Phân tích cú pháp sheet Excel thông qua SheetJS (`XLSX`), tự động nhận diện và gộp dữ liệu theo mã đơn hàng bán `so_code`.
+   - Đối soát tự động (Bulk DB Query) với danh mục sản phẩm của website qua bảng `esc_product` (sử dụng helper `TABLE('product')`).
+   - Xây dựng giao diện Modal Preview cực đẹp hiển thị các thông tin tổng kết (Tổng đơn hàng, Đơn hợp lệ, Đơn lỗi) và danh sách chi tiết từng **Thẻ đơn hàng bán (SO Card)**.
+   - Nút **"Đồng ý nhập"** cho phép ghi trực tiếp nhiều đơn hàng và danh mục chi tiết sản phẩm vào cơ sở dữ liệu (`esc_so` và `esc_so_items`), hỗ trợ tự động ghi đè/xóa các đơn hàng bán cũ có cùng mã đơn nhập vào quá khứ.
+
+#### Files đã sửa đổi:
+- **`pages/OrderList.tsx`**
+
+#### Lưu ý quan trọng cho KA:
+- Toàn bộ dữ liệu nhập bán được đối soát khớp mã sản phẩm trực tiếp với DB (bảng `esc_product`) và ghi nhận vào `esc_so` & `esc_so_items`.
+- Các hóa đơn có ngày trong quá khứ được truyền chính xác vào trường `order_date`.
+- Nếu đơn hàng bán đã tồn tại trên DB, logic frontend sẽ tự động làm sạch các giao dịch liên quan (`esc_stock_movement`, `esc_serial_tracking`) và thực hiện ghi đè để tránh trùng lặp dữ liệu. Không cần thêm API xử lý từ phía Back-end.
+
+---
+
 ====== MI - END ======
 
+====== KA - START ======
+
+## [2026-05-10] — Hoàn tất nhóm Báo cáo (3 trang) + nhóm Vận hành (5 trang)
+
+### Files tạo mới:
+
+**1. `pages/InboundReport.tsx`** — Báo cáo Nhập kho
+- Query `esc_po` + count `esc_po_items` theo `website_id=9`
+- Stats: tổng đơn PO, tổng tiền nhập, đã thanh toán, còn nợ
+- Lọc: khoảng ngày `order_date`, trạng thái PO, tìm kiếm mã PO / tên NCC
+- Phân trang server-side 15 dòng/trang
+
+**2. `pages/ProcessReport.tsx`** — Báo cáo Xử lý đơn
+- Query `esc_so` toàn bộ trạng thái theo `website_id=9`
+- Stats đếm theo nhóm: đang xử lý (new+confirmed+processing), đã soạn/đóng gói, đã giao
+- Lọc: khoảng ngày `order_date`, trạng thái, tìm kiếm mã SO / tên KH
+
+**3. `pages/OutboundReport.tsx`** — Báo cáo Xuất kho
+- Query `esc_so` filter `status IN (shipped, completed, returned)`
+- Lọc theo `shipped_date` (ngày giao thực tế)
+- Stats: tổng đơn xuất, doanh thu, đã thu, còn công nợ
+
+**4. `pages/OpSplit.tsx`** — Rã hàng chẵn
+- Form tạo phiếu → insert `esc_stock_movement` (`movement_type='split'`)
+- Dropdown chỉ hiện SP có `unit2 IS NOT NULL` (có đơn vị lớn)
+- Hiển thị tỷ lệ quy đổi `unit2_ratio` (1 thùng = N cái)
+- Lịch sử 50 bản ghi gần nhất từ `esc_stock_movement`
+
+**5. `pages/OpRepack.tsx`** — Đóng gói lại
+- Form tạo phiếu → insert `esc_stock_movement` (`movement_type='repack'`)
+- Lịch sử 50 bản ghi gần nhất
+
+**6. `pages/OpAudit.tsx`** — Kiểm kê kho
+- Tạo phiên kiểm kê → insert `esc_stock_audit` (auto-gen `audit_code` = `KKyyyymmdd-XXXX`)
+- Thêm SP vào phiên → insert `esc_stock_audit_items`
+- Cột `diff_qty` là `GENERATED ALWAYS AS (actual_qty - system_qty) STORED` — DB tự tính, không cần truyền
+- Cập nhật trạng thái: `draft` → `in_progress` → `completed`
+- Layout 2 cột: danh sách phiên trái / chi tiết phải
+
+**7. `pages/OpReplenish.tsx`** — Châm hàng
+- Query `esc_inventory WHERE available_qty ≤ threshold` (mặc định 20)
+- 2 mức cảnh báo: critical (≤5, màu đỏ) và low (≤threshold, màu vàng)
+- Nút "Châm hàng" trên từng dòng → tự điền `product_code` + `to_location` vào form
+- Ghi nhận → insert `esc_stock_movement` (`movement_type='adjust'`, `ref_type='REPLENISH'`)
+- Ngưỡng cảnh báo chỉnh được real-time
+
+**8. `pages/OpTransfer.tsx`** — Luân chuyển hàng
+- Tạo phiếu → insert `esc_stock_transfer` (auto-gen `transfer_code` = `LCyyyymmdd-XXXX`)
+- Thêm SP → insert `esc_stock_transfer_items`
+- Cập nhật trạng thái: `pending` → `in_transit` → `completed`
+- Layout 2 cột: danh sách phiếu trái / chi tiết phải
+
+### Files đã sửa:
+
+**9. `App.tsx`**
+- Import 8 trang mới
+- Thay `<ComingSoon />` bằng component thực cho tất cả `rpt_*` và `op_*`
+- Thêm route `rpt_xnt` → `<InventoryReport />` (BC XNT đã có sẵn)
+
+**10. `types.ts`**
+- Thêm `'rpt_xnt'` vào `PageType`
+
+### Lưu ý quan trọng cho MI:
+- 8 trang mới dùng cùng pattern layout với các trang cũ (breadcrumb header, stat cards, table `py-1.5`)
+- `OpAudit` và `OpTransfer` có layout 2 cột (`xl:col-span-2` / `xl:col-span-3`) — có thể tinh chỉnh responsive
+- `OpReplenish`: nút "Châm hàng" trên dòng tự điền form — MI có thể nâng cấp thành slide-in panel
+- Màu icon: Báo cáo (emerald/amber/blue), Vận hành (orange/violet/indigo/rose/teal)
+
+====== KA - END ======
+
+====== MI - START ======
+
+### [2026-05-10] — Tinh gọn Sidebar: Di chuyển "Danh sách đơn" từ "2. Xử lý đơn" tích hợp vào "3. Đơn xuất" (Outbound Tabs)
+
+#### Files đã sửa:
+**1. `components/Layout.tsx`**
+- Loại bỏ tiểu mục "Danh sách đơn" khỏi menu con của **`2. Xử lý đơn`** (`grp_proc`) trên Sidebar để tối ưu hóa không gian hiển thị và giảm trùng lặp.
+
+**2. `App.tsx`**
+- Cập nhật định hướng trang (routing): Ánh xạ các key trang cũ như `'orders'` và `'proc_list'` trỏ trực tiếp đến `OutboundManager` (Quản lý Đơn xuất có tab) để đảm bảo không có link hỏng hay lỗi điều hướng.
+- Định dạng lại nút "Quay lại" trong trang chi tiết đơn hàng (`OrderDetail`) để quay về màn hình `'grp_outbound'` thay vì `'orders'`.
+
+#### Lưu ý quan trọng cho KA:
+- Các chỉnh sửa này chỉ thuần túy liên quan đến phân vùng hiển thị UI/Frontend, không làm thay đổi các quyền hạn module hay logic dữ liệu trong API/DB của KA.
+
+---
+
+### [2026-05-10] — Khắc phục lỗi import đơn hàng bán (SO) do sai lệch cột website_id
+
+#### Files đã sửa:
+**1. `pages/OrderList.tsx`**
+- Loại bỏ trường `website_id: [APP_CONFIG.WEBSITE_ID]` khi ánh xạ danh sách sản phẩm bán lẻ (`soItems`) trước khi thực hiện câu lệnh chèn dữ liệu (`insert`) vào bảng chi tiết đơn bán `esc_so_items`.
+
+#### Nguyên nhân lỗi:
+- Theo đúng thiết kế cấu trúc dữ liệu của KA, bảng chính đơn hàng bán `esc_so` có cột phân loại `website_id` (để hỗ trợ multi-site), nhưng bảng chi tiết `esc_so_items` chỉ tập trung lưu trữ danh mục sản phẩm của đơn đó và không chứa cột `website_id`. Do đó, khi insert kèm `website_id` vào `esc_so_items`, Supabase sẽ báo lỗi không tìm thấy cột trong schema cache.
+
+#### Lưu ý quan trọng cho KA:
+- Việc loại bỏ này giúp đồng bộ hoàn toàn Frontend với Database Schema hiện tại của KA. Không yêu cầu xử lý thêm logic Back-end hay cập nhật Database.
+
+====== MI - END ======
+
+====== MI - START ======
+
+### [2026-05-10] — Sửa lỗi không hiển thị Đơn xuất đã import và lỗi xem chi tiết đơn hàng (Order Detail)
+
+#### Files đã sửa:
+**1. `pages/OrderList.tsx`**
+- Sửa đổi truy vấn `fetchOrders()`: thay đổi tên quan hệ (relationship names) trong câu lệnh join lồng nhau từ dạng cứng `'so_items'` và `'product'` thành định dạng động sử dụng helper `TABLE('so_items')` và `TABLE('product')`.
+- Việc này giúp PostgREST/Supabase hiểu đúng các bảng được liên kết có tiền tố là `esc_so_items` và `esc_product` trong database thực tế, khắc phục triệt để lỗi truy vấn thất bại (lỗi không tìm thấy quan hệ trong cache schema) vốn làm ứng dụng âm thầm dùng dữ liệu mẫu (mock data) thay vì hiển thị đơn hàng thật đã import.
+
+**2. `pages/OrderDetail.tsx`**
+- Sửa lỗi truy vấn chi tiết đơn hàng: thay thế điều kiện lọc `.eq('so_id', soData.id)` thành `.eq('so_code', orderCode)` khi truy xuất các dòng hàng của đơn bán trong bảng `esc_so_items`.
+- Nguyên nhân lỗi: bảng `esc_so_items` của KA thiết kế liên kết trực tiếp với bảng `esc_so` qua khoá ngoại `so_code` (VARCHAR), hoàn toàn không chứa cột `so_id` (INTEGER). Sự sai lệch này gây lỗi crash ngầm khi người dùng bấm xem chi tiết một đơn SO thực tế trên database.
+
+#### Lưu ý quan trọng cho KA:
+- Toàn bộ các bảng trong hệ thống của dự án (ví dụ `esc_so`, `esc_so_items`, `esc_product`) đều đang **TẮT** bảo mật Row Level Security (RLS) - thông tin cảnh báo bảo mật cực kỳ quan trọng từ hệ thống Supabase.
+- KA hãy kiểm tra và sớm lên phương án kích hoạt RLS cùng các chính sách bảo mật phù hợp cho 45 bảng dữ liệu để tránh rò rỉ hoặc bị thao túng dữ liệu từ phía Client (Anon key).
+
+====== MI - END ======
+
+====== KA - START ======
+
+## [2026-05-10] — Thiết kế RLS (Row Level Security) toàn bộ 26 bảng
+
+### Vấn đề & Phân tích:
+App dùng **anon key** + custom auth (không phải Supabase Auth) → không có `auth.uid()`.
+Giải pháp: dùng `set_config('app.current_user_id', ...)` + helper functions trong schema `app`.
+
+### Files tạo mới:
+
+**1. `database/rls_policies.sql`** — Script SQL chạy 1 lần trong Supabase SQL Editor
+- Tạo 4 helper functions trong schema `app`:
+  - `app.current_user_id()` — đọc user_id từ session config
+  - `app.is_super_admin()` — kiểm tra super_admin flag trong `esc_users`
+  - `app.has_website_access(wid)` — kiểm tra user có quyền truy cập website cụ thể
+  - `app.can_access_website_array(arr)` — kiểm tra overlap website_id array
+- `ENABLE ROW LEVEL SECURITY` cho toàn bộ 26 bảng
+- ~70 policies theo ma trận phân quyền:
+  - **esc_users**: đọc bản thân + cùng site; ghi chỉ super_admin
+  - **esc_staff_profiles**: đọc cùng site; ghi chỉ super_admin
+  - **esc_hr_attendance**: đọc/ghi bản thân + cùng site; không xóa
+  - **esc_product, esc_supplier, esc_customer**: đọc/ghi cùng site; không xóa (dùng status=inactive)
+  - **esc_po, esc_so**: đọc/ghi cùng site; không xóa (dùng status=cancelled)
+  - **esc_po_items, esc_so_items**: xóa được khi đơn còn ở trạng thái draft/new
+  - **esc_stock_movement**: chỉ SELECT + INSERT — bất biến sau khi ghi (audit trail)
+  - **esc_cost_entries, esc_monthly_summary**: ghi/sửa chỉ super_admin
+  - **esc_notifications**: đọc/xóa chỉ bản thân
+
+**2. `database/rls_setup_guide.md`** — Hướng dẫn tích hợp cho MI
+- SQL tạo function `set_app_user(uid)` trong Supabase
+- Cách gọi `supabase.rpc('set_app_user', { uid })` trong `LoginPopup.tsx` sau login
+- Giải thích về connection pooling
+- Ma trận phân quyền tóm tắt
+
+### Cách chạy (do MIKE thực hiện):
+1. Vào **Supabase Dashboard → SQL Editor**
+2. Paste và chạy `database/rls_policies.sql`
+3. Chạy thêm đoạn SQL tạo `set_app_user` trong `rls_setup_guide.md`
+
+### Lưu ý quan trọng cho MI:
+- Sau khi MIKE chạy RLS script, **tất cả request sẽ bị chặn** cho đến khi `LoginPopup.tsx` gọi `set_app_user`
+- MI cần thêm **1 dòng** vào `LoginPopup.tsx`:
+  - Vị trí: **sau** `localStorage.setItem('wms_user', JSON.stringify(userData));`
+  - **Trước** `onLoginSuccess(userData);`
+  - Nội dung: `await supabase.rpc('set_app_user', { uid: user.id });`
+  - (Xem chi tiết trong `database/rls_setup_guide.md`)
+
+====== KA - END ======
+
+====== MI - START ======
+
+### [2026-05-10] — Tái cấu trúc thanh Menu Sidebar: Chuyển các chức năng "Xử lý đơn" vào dưới menu "Đơn xuất"
+
+#### Files đã sửa:
+**1. `components/Layout.tsx`**
+- Loại bỏ hoàn toàn mục menu chính **`2. Xử lý đơn`** (`grp_proc`).
+- Chuyển 3 menu con: **`Soạn đơn`** (`proc_pick`), **`Đóng gói`** (`proc_pack`), và **`Xếp tuyến`** (`proc_route`) xuống làm menu con nằm trực tiếp trong mục **`2. Đơn xuất`** (`grp_outbound`).
+- Thêm menu con **`Danh sách đơn`** (`grp_outbound`) lên trên cùng của danh sách con thuộc **`2. Đơn xuất`** để dẫn người dùng đến màn hình chính Quản lý đơn xuất (OutboundManager).
+- Cập nhật logic tự động mở rộng menu con (`expandedMenu` auto-expand) hỗ trợ mở rộng menu cha khi truy cập trang chính bằng cách kiểm tra: `item.id === activePage`.
+- Đánh số lại thứ tự tất cả các menu cha phía sau một cách tuần tự (1 đến 9 thay vì nhảy cóc) để đảm bảo tính mỹ thuật cao và giao diện chuyên nghiệp.
+
+#### Lưu ý quan trọng cho KA:
+- Các thay đổi cấu trúc Sidebar này hoàn toàn chạy trên Frontend, không làm ảnh hưởng đến cấu trúc API hay phân quyền Database. Quyền của module `outbound` giờ đây tự động bao quát cả các tiểu mục soạn đơn, đóng gói, xếp tuyến.
+
+====== MI - END ======
+
+====== MI - START ======
+
+### [2026-05-10] — Tích hợp Row Level Security (RLS) sau khi Đăng nhập thành công
+
+#### Files đã sửa:
+**1. `components/LoginPopup.tsx`**
+- Thêm lời gọi RPC `supabase.rpc('set_app_user', { uid: user.id })` ngay sau khi lưu thông tin người dùng vào `localStorage` và trước khi gọi hàm callback `onLoginSuccess`.
+- Việc này giúp truyền tải chính xác thông tin định danh `user_id` hiện tại xuống phiên làm việc (session config) của database, cho phép các hàm kiểm tra bảo mật trong cơ chế Row Level Security (RLS) do KA vừa thiết lập có thể xác định danh tính và quyền hạn của người dùng, từ đó cho phép các API đọc/ghi dữ liệu an toàn.
+
+#### Lưu ý quan trọng cho KA:
+- MI đã hoàn tất việc tích hợp RPC đăng ký phiên người dùng (`set_app_user`) đúng vị trí theo yêu cầu. Hãy kiểm tra kết nối và bảo mật trên môi trường chạy thực tế!
+
+====== MI - END ======
+
+====== MI - START ======
+
+### [2026-05-10] — Tối ưu hóa UI/UX Responsive cho 8 trang mới thuộc nhóm Báo cáo và Vận hành
+
+#### Files đã sửa:
+**1. `pages/OpAudit.tsx` (Kiểm kê kho)**
+- Cải thiện bố cục 2 cột dạng danh sách và chi tiết (`list-detail layout`).
+- Trên màn hình di động/tablet (`< xl`), danh sách các phiên kiểm kê sẽ tự động ẩn đi khi người dùng chọn xem chi tiết của một phiên, giúp tối ưu diện tích hiển thị và tập trung sự chú ý.
+- Thêm nút **`arrow_back`** (quay lại) mượt mà ở tiêu đề phần chi tiết chỉ hiển thị trên di động để quay trở lại danh sách nhanh chóng.
+
+**2. `pages/OpTransfer.tsx` (Luân chuyển hàng)**
+- Áp dụng chuẩn tối ưu hóa UI/UX responsive tương tự như trang Kiểm kê.
+- Tự động chuyển đổi giữa chế độ xem danh sách hoặc chi tiết linh hoạt dựa vào việc đã chọn một phiên luân chuyển hay chưa trên màn hình di động, cùng với nút quay lại tiện dụng.
+
+**3. `components/Layout.tsx` (Sidebar Navigation)**
+- Cải tiến hàm xử lý sự kiện `onClick` của thanh menu cha chứa các thư mục con (ví dụ: **2. Đơn xuất**, **3. Kho hàng**, **4. Báo cáo**, ...).
+- Khi người dùng click chọn mở rộng một mục cha bất kỳ, hệ thống sẽ tự động đồng bộ và chuyển đổi trang hiển thị chính sang mục con đầu tiên của nhóm đó (ví dụ: Click vào **2. Đơn xuất** sẽ tự động mở trang **Danh sách đơn**, ...). Giúp trải nghiệm điều hướng đồng nhất, nhanh chóng và mượt mà hơn.
+
+**4. Đánh giá chung cho 6 trang còn lại:**
+- Đã kiểm tra toàn diện và xác nhận: `InboundReport.tsx`, `ProcessReport.tsx`, `OutboundReport.tsx`, `OpSplit.tsx`, `OpRepack.tsx`, và `OpReplenish.tsx` đều có cấu trúc Tailwind CSS đồng bộ, màu sắc hài hòa cao cấp (Emerald cho nhập, Blue cho xuất, Amber cho xử lý, Orange/Teal/Violet cho vận hành), Spacing và Padding nhất quán đúng chuẩn của hệ thống ESC.
+
+#### Lưu ý quan trọng cho KA:
+- Toàn bộ 8 trang mới đều hoạt động trơn tru với dữ liệu trực tiếp và không phát sinh bất kỳ lỗi TypeScript nào.
+
+====== MI - END ======
 
