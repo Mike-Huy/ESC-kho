@@ -633,3 +633,93 @@ Giải pháp: dùng `set_config('app.current_user_id', ...)` + helper functions 
 
 ====== MI - END ======
 
+
+====== KA - START ======
+
+## [2026-05-10] — Hệ thống phân quyền 5 Role + Fix deploy Vercel + Flow đơn xuất
+
+### 1. Hệ thống phân quyền 5 Role chuẩn
+
+**File tạo mới: `database/seed_roles.sql`**
+- Seed 5 role vào `esc_erp_roles` (website_id=9):
+
+| Role | Label | Level | Modules |
+|------|-------|-------|---------|
+| `customer` | Khách hàng | 1 | orders (read only) |
+| `staff` | Nhân viên | 2 | inbound, orders, outbound, operation (CRUD trừ delete) |
+| `leader` | Trưởng nhóm | 3 | + inventory, reports, hr (read) |
+| `admin` | Quản trị | 4 | Full CRUD trừ delete hr/finance |
+| `super_admin` | Super Admin | 5 | Toàn quyền tuyệt đối |
+
+- Tự động UPDATE `allowed_modules` trong `esc_staff_profiles` theo role được gán
+- Có bước kiểm tra kết quả cuối file
+
+**Files đã sửa:**
+
+**`components/LoginPopup.tsx`**
+- Join `erp_role:erp_role_id(name, label, color)` khi fetch staff_profiles
+- Lưu `roleLabel`, `roleName`, `roleColor` vào localStorage cùng userData
+
+**`components/Layout.tsx`**
+- Thêm `roleLabel?`, `roleName?`, `roleColor?` vào interface `UserData`
+- Header hiển thị đúng tên role + màu riêng thay vì hardcode "Nhân viên"
+
+**`pages/RoleManagement.tsx`** — viết lại hoàn toàn:
+- Sửa tên bảng đúng schema: `esc_erp_roles`, `esc_erp_role_permissions`, `esc_users`, `esc_staff_profiles`
+- Thêm modal **Tạo vai trò mới** (name, label, description, color picker)
+- Thêm legend cấp độ 5 role ở sidebar trái
+- Tìm kiếm nhân viên real-time
+- Hiển thị màu + label role trong danh sách gán nhân viên
+- Tự động tạo permission mặc định (toàn false) cho role mới
+
+---
+
+### 2. Fix trang trắng trên Vercel
+
+**Root cause:** `index.html` có `<script type="importmap">` trỏ esm.sh xung đột với Vite bundle + `<link href="/index.css">` không tồn tại trong dist/
+
+**Fix:**
+- Xóa `importmap` và link `index.css` khỏi `index.html`
+- Tạo `vercel.json`: `outputDirectory: dist`, `rewrites: /* → /index.html`
+- Bỏ `dist` khỏi `.gitignore`, push `dist/` thẳng lên GitHub để Vercel serve trực tiếp (không cần build step)
+
+**Lưu ý quan trọng:** Mỗi lần thay đổi code phải:
+1. Chạy `npm run build` locally
+2. `git add dist/` + commit + push
+Vercel sẽ serve file dist/ đã build sẵn, không tự build.
+
+**Biến môi trường cần thêm trên Vercel dashboard:**
+- `VITE_SUPABASE_URL` = `https://jhebreoxwuimlqwvjdok.supabase.co`
+- `VITE_SUPABASE_KEY` = (xem `.env.local`)
+
+---
+
+### 3. Flow xử lý đơn xuất 4 bước tuần tự
+
+**File sửa: `pages/OrderList.tsx`**
+
+Flow: `new` → `picking` → `packing` → `routing` → `shipped`
+
+| Status DB | Label hiển thị | Màu |
+|-----------|----------------|-----|
+| `new` | Mới | Blue |
+| `picking` | Đang soạn | Amber |
+| `packing` | Đang đóng gói | Indigo |
+| `routing` | Đang sắp tuyến | Purple |
+| `shipped` | Đã bàn giao | Emerald |
+
+- Mỗi đơn chỉ hiện **1 nút duy nhất** = bước tiếp theo (không cho nhảy cóc)
+- Khi `shipped`: hiện badge "Hoàn tất", không có nút tiếp
+- Badge animate-pulse khi đang xử lý (chưa shipped/cancelled)
+- `handleUpdateOrderStatus` cập nhật DB + local state
+
+---
+
+### 4. Tình trạng báo cáo Xuất - Nhập - Tồn
+
+**`pages/InventoryReport.tsx`** — code UI đầy đủ, routing đúng
+- Đọc từ bảng `esc_inventory` (snapshot tồn kho theo ngày)
+- Nếu DB trống → hiện dữ liệu mẫu Demo (badge "Dữ liệu mẫu")
+- **Cần làm tiếp:** Viết SQL populate `esc_inventory` từ data PO/SO thực tế
+
+====== KA - END ======
