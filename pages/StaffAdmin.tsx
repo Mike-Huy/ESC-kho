@@ -7,6 +7,7 @@ const StaffAdmin: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [source, setSource] = useState<'supabase' | 'local'>('supabase');
   const [stats, setStats] = useState({ present: 0, total: 0 });
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Dữ liệu mẫu Fallback
   const mockStaff = [
@@ -49,8 +50,7 @@ const StaffAdmin: React.FC = () => {
          
          const { data, error } = await supabase
            .from(TABLE('users'))
-           .select('id, full_name, phone, avatar, user_type, staff_profiles:esc_staff_profiles!user_id(employee_code, position, dept_id, esc_hr_departments(name))')
-           .eq('user_type', 'staff')
+           .select('id, full_name, phone, avatar, user_type, is_super_admin, staff_profiles:esc_staff_profiles!user_id(employee_code, position, dept_id, esc_hr_departments(name))')
            .contains('website_id', [APP_CONFIG.WEBSITE_ID])
            .order('full_name', { ascending: true });
 
@@ -58,18 +58,22 @@ const StaffAdmin: React.FC = () => {
 
          if (data && data.length > 0) {
            setSource('supabase');
-           const mappedStaff = data.map((item: any) => ({
-             id: item.id,
-             name: item.full_name,
-             code: item.staff_profiles?.employee_code || '--',
-             dept: item.staff_profiles?.esc_hr_departments?.name || '--',
-             position: item.staff_profiles?.position || '--',
-             status: 'off',
-             in: '--',
-             out: '--',
-             total: '--',
-             avatar: item.avatar
-           }));
+           const nonSuperAdmins = data.filter((item: any) => item.is_super_admin !== true);
+           const mappedStaff = nonSuperAdmins.map((item: any) => {
+             const profile = Array.isArray(item.staff_profiles) ? item.staff_profiles[0] : item.staff_profiles;
+             return {
+               id: item.id,
+               name: item.full_name,
+               code: profile?.employee_code || '--',
+               dept: profile?.esc_hr_departments?.name || '--',
+               position: profile?.position || '--',
+               status: 'off',
+               in: '--',
+               out: '--',
+               total: '--',
+               avatar: item.avatar
+             };
+           });
            
            setStaffList(mappedStaff);
            setStats({
@@ -106,41 +110,10 @@ const StaffAdmin: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
             <h1 className="text-xl font-bold text-slate-900">Quản lý Nhân viên & Chấm công</h1>
-            {source === 'local' && (
-                <p className="text-xs text-amber-600 font-bold mt-1 flex items-center gap-1">
-                    <span className="material-icons-round text-sm">warning</span>
-                    Đang hiển thị dữ liệu mẫu (Kiểm tra lại kết nối Supabase)
-                </p>
-            )}
         </div>
         <button className="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-md transition-all">
            <span className="material-icons-round text-sm">add_circle</span> Thêm nhân viên
         </button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-         {[
-           { title: 'Nhân viên hiện diện', val: stats.present.toString(), sub: `/ ${stats.total}`, icon: 'groups', color: 'primary', footer: 'Tỷ lệ có mặt hôm nay', footerIcon: 'trending_up', footerColor: 'emerald' },
-           { title: 'Chờ phê duyệt công', val: '12', icon: 'pending_actions', color: 'primary', footer: 'Cần xử lý trước 17:00', footerIcon: 'priority_high', footerColor: 'amber' },
-           { title: 'Tăng ca dự kiến', val: '08', icon: 'more_time', color: 'primary', footer: 'Khu vực Đóng gói', footerIcon: 'info', footerColor: 'blue' },
-           { title: 'Vắng mặt', val: (stats.total - stats.present).toString(), icon: 'person_off', color: 'primary', footer: 'Nghỉ phép & Không phép', footerIcon: 'report_problem', footerColor: 'red', valColor: 'red' }
-         ].map((card, idx) => (
-           <div key={idx} className="bg-white border border-slate-200 p-6 rounded-xl shadow-sm hover:shadow-md transition-all group">
-              <div className="flex justify-between items-start">
-                 <div>
-                    <p className="text-slate-500 text-sm font-semibold mb-1">{card.title}</p>
-                    <h3 className={`text-3xl font-bold ${card.valColor ? 'text-red-600' : 'text-slate-900'}`}>{card.val} <span className="text-lg font-normal text-slate-400">{card.sub}</span></h3>
-                 </div>
-                 <div className="bg-blue-50 text-primary p-2 rounded-lg group-hover:bg-primary group-hover:text-white transition-colors">
-                    <span className="material-icons-round">{card.icon}</span>
-                 </div>
-              </div>
-              <div className={`mt-4 flex items-center gap-2 text-xs font-bold text-${card.footerColor}-600`}>
-                 <span className="material-icons-round text-sm">{card.footerIcon}</span>
-                 <span>{card.footer}</span>
-              </div>
-           </div>
-         ))}
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
@@ -148,7 +121,13 @@ const StaffAdmin: React.FC = () => {
             <div className="flex items-center gap-4 flex-1">
                <div className="relative flex-1 max-w-md">
                   <span className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
-                  <input className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-sm outline-none transition-all" placeholder="Tìm kiếm tên nhân viên, mã số..." type="text" />
+                  <input 
+                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-sm outline-none transition-all" 
+                    placeholder="Tìm kiếm tên nhân viên, mã số..." 
+                    type="text" 
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                  />
                </div>
             </div>
          </div>
@@ -169,48 +148,62 @@ const StaffAdmin: React.FC = () => {
                   </tr>
                </thead>
                <tbody className="divide-y divide-slate-100">
-                  {staffList.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-blue-50/30 transition-colors group">
-                       <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                             <div className="w-10 h-10 bg-slate-200 rounded-lg overflow-hidden border border-slate-100 flex-shrink-0">
-                                {row.avatar ? (
-                                    <img src={row.avatar} className="w-full h-full object-cover" alt={row.name}/>
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400">
-                                        <span className="material-icons-round">person</span>
-                                    </div>
-                                )}
+                  {staffList.filter(s => 
+                     s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                     s.code.toLowerCase().includes(searchQuery.toLowerCase())
+                  ).length === 0 ? (
+                     <tr>
+                       <td colSpan={7} className="px-6 py-10 text-center text-slate-400 italic text-sm">
+                         Không tìm thấy nhân viên nào phù hợp
+                       </td>
+                     </tr>
+                   ) : (
+                     staffList.filter(s => 
+                       s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                       s.code.toLowerCase().includes(searchQuery.toLowerCase())
+                     ).map((row, idx) => (
+                       <tr key={idx} className="hover:bg-blue-50/30 transition-colors group">
+                          <td className="px-6 py-4">
+                             <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-slate-200 rounded-lg overflow-hidden border border-slate-100 flex-shrink-0">
+                                   {row.avatar ? (
+                                       <img src={row.avatar} className="w-full h-full object-cover" alt={row.name}/>
+                                   ) : (
+                                       <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400">
+                                           <span className="material-icons-round">person</span>
+                                       </div>
+                                   )}
+                                </div>
+                                <div>
+                                   <div className="text-sm font-bold text-slate-900">{row.name}</div>
+                                   <div className="text-xs text-slate-500 font-medium">MSNV: {row.code}</div>
+                                </div>
                              </div>
-                             <div>
-                                <div className="text-sm font-bold text-slate-900">{row.name}</div>
-                                <div className="text-xs text-slate-500 font-medium">MSNV: {row.code}</div>
-                             </div>
-                          </div>
-                       </td>
-                       <td className="px-6 py-4">
-                           <div className="flex flex-col">
-                               <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 w-fit mb-1">{row.dept}</span>
-                               <span className="text-[10px] text-slate-500 font-medium">{row.position}</span>
-                           </div>
-                       </td>
-                       <td className="px-6 py-4">
-                          {row.status === 'working' ? (
-                             <div className="flex items-center gap-2 text-emerald-600 text-sm font-bold"><span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> Đang làm việc</div>
-                          ) : row.status === 'break' ? (
-                             <div className="flex items-center gap-2 text-amber-600 text-sm font-bold"><span className="w-2 h-2 bg-amber-500 rounded-full"></span> Nghỉ giữa ca</div>
-                          ) : (
-                             <div className="flex items-center gap-2 text-slate-400 text-sm font-bold"><span className="w-2 h-2 bg-slate-300 rounded-full"></span> Nghỉ ca</div>
-                          )}
-                       </td>
-                       <td className="px-6 py-4 text-center font-bold text-sm text-slate-700">{row.in}</td>
-                       <td className="px-6 py-4 text-center font-medium text-sm text-slate-400">{row.out}</td>
-                       <td className="px-6 py-4 text-center text-sm font-extrabold text-slate-900">{row.total}</td>
-                       <td className="px-6 py-4 text-right">
-                          <button className="text-slate-400 hover:text-primary"><span className="material-icons-round">edit</span></button>
-                       </td>
-                    </tr>
-                  ))}
+                          </td>
+                          <td className="px-6 py-4">
+                              <div className="flex flex-col">
+                                  <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 w-fit mb-1">{row.dept}</span>
+                                  <span className="text-[10px] text-slate-500 font-medium">{row.position}</span>
+                              </div>
+                          </td>
+                          <td className="px-6 py-4">
+                             {row.status === 'working' ? (
+                                <div className="flex items-center gap-2 text-emerald-600 text-sm font-bold"><span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> Đang làm việc</div>
+                             ) : row.status === 'break' ? (
+                                <div className="flex items-center gap-2 text-amber-600 text-sm font-bold"><span className="w-2 h-2 bg-amber-500 rounded-full"></span> Nghỉ giữa ca</div>
+                             ) : (
+                                <div className="flex items-center gap-2 text-slate-400 text-sm font-bold"><span className="w-2 h-2 bg-slate-300 rounded-full"></span> Nghỉ ca</div>
+                             )}
+                          </td>
+                          <td className="px-6 py-4 text-center font-bold text-sm text-slate-700">{row.in}</td>
+                          <td className="px-6 py-4 text-center font-medium text-sm text-slate-400">{row.out}</td>
+                          <td className="px-6 py-4 text-center text-sm font-extrabold text-slate-900">{row.total}</td>
+                          <td className="px-6 py-4 text-right">
+                             <button className="text-slate-400 hover:text-primary"><span className="material-icons-round">edit</span></button>
+                          </td>
+                       </tr>
+                     ))
+                   )}
                </tbody>
             </table>
             )}
