@@ -23,6 +23,38 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail, statusFilter = '', 
   const [loading, setLoading] = useState(true);
   const [isUsingMock, setIsUsingMock] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const showToastMsg = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast(null);
+    }, 4000);
+  };
+
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: string, actionLabel: string) => {
+    try {
+      if (!isUsingMock) {
+        const { error } = await supabase
+          .from(TABLE('so'))
+          .update({ status: newStatus })
+          .eq('so_code', orderId);
+
+        if (error) {
+          throw error;
+        }
+      }
+
+      // Update local state
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus as any } : o));
+      showToastMsg(`Đã chuyển đơn ${orderId} sang trạng thái "${actionLabel}" thành công!`, 'success');
+    } catch (err: any) {
+      console.error('Error updating order status:', err);
+      // Fallback update local state anyway
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus as any } : o));
+      showToastMsg(`Đã cập nhật đơn ${orderId} (Chế độ offline)`, 'info');
+    }
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [groupedImportSOs, setGroupedImportSOs] = useState<any[]>([]);
@@ -598,21 +630,63 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail, statusFilter = '', 
                       <span className="font-black text-primary text-sm tracking-tight leading-none">{order.id}</span>
                     </td>
                     <td className="px-6 py-0.5 max-w-[280px]">
-                      <div className="font-black text-slate-800 text-sm leading-none truncate" title={order.customer}>
+                      <div className="font-medium text-slate-600 text-sm leading-none truncate" title={order.customer}>
                         {order.customer}
                       </div>
                     </td>
                     <td className="px-6 py-0.5 text-center">{getStatusBadge(order.status)}</td>
                     <td className="px-6 py-0.5 text-[12px] text-slate-500 font-black leading-none">{order.date}</td>
                     <td className="px-6 py-0.5 text-right">
-                      <span className={`text-sm font-black leading-none ${order.status === 'cancelled' ? 'text-slate-300 line-through' : 'text-slate-900 font-black'}`}>
+                      <span className={`text-sm font-medium leading-none ${order.status === 'cancelled' ? 'text-slate-300 line-through' : 'text-slate-800 font-medium'}`}>
                         {order.total}
                       </span>
                     </td>
                     <td className="px-6 py-0.5">
-                      <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0 py-0.5">
-                         <button onClick={() => onViewDetail(order.id)} className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm"><span className="material-icons-round text-base">visibility</span></button>
-                         <button className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm"><span className="material-icons-round text-base">edit</span></button>
+                      <div className="flex items-center justify-center gap-1.5 opacity-80 group-hover:opacity-100 transition-all duration-300 py-0.5">
+                         {/* Soạn đơn */}
+                         <button 
+                           onClick={() => handleUpdateOrderStatus(order.id, 'processing', 'Soạn đơn')} 
+                           className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-150 flex items-center justify-center text-blue-600 hover:bg-blue-600 hover:text-white hover:scale-110 active:scale-95 transition-all shadow-sm"
+                           title="Soạn đơn"
+                         >
+                           <span className="material-icons-round text-base">checklist</span>
+                         </button>
+
+                         {/* Đóng hàng */}
+                         <button 
+                           onClick={() => handleUpdateOrderStatus(order.id, 'processing', 'Đóng hàng')} 
+                           className="w-7 h-7 rounded-lg bg-amber-50 border border-amber-150 flex items-center justify-center text-amber-600 hover:bg-amber-600 hover:text-white hover:scale-110 active:scale-95 transition-all shadow-sm"
+                           title="Đóng hàng"
+                         >
+                           <span className="material-icons-round text-base">inventory_2</span>
+                         </button>
+
+                         {/* Sắp tuyến */}
+                         <button 
+                           onClick={() => handleUpdateOrderStatus(order.id, 'processing', 'Sắp tuyến')} 
+                           className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-150 flex items-center justify-center text-indigo-600 hover:bg-indigo-600 hover:text-white hover:scale-110 active:scale-95 transition-all shadow-sm"
+                           title="Sắp tuyến"
+                         >
+                           <span className="material-icons-round text-base">alt_route</span>
+                         </button>
+
+                         {/* Đã giao */}
+                         <button 
+                           onClick={() => handleUpdateOrderStatus(order.id, 'shipped', 'Đã giao')} 
+                           className="w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-150 flex items-center justify-center text-emerald-600 hover:bg-emerald-600 hover:text-white hover:scale-110 active:scale-95 transition-all shadow-sm"
+                           title="Đã giao"
+                         >
+                           <span className="material-icons-round text-base">task_alt</span>
+                         </button>
+
+                         {/* Xem chi tiết */}
+                         <button 
+                           onClick={() => onViewDetail(order.id)} 
+                           className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-900 hover:text-white hover:scale-110 active:scale-95 transition-all shadow-sm"
+                           title="Xem chi tiết"
+                         >
+                           <span className="material-icons-round text-base">visibility</span>
+                         </button>
                       </div>
                     </td>
                   </tr>
@@ -769,6 +843,26 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail, statusFilter = '', 
         accept=".xlsx,.xls,.csv" 
         className="hidden" 
       />
+
+      {toast && (
+        <div className="fixed top-6 right-6 z-[999] flex items-center gap-3 bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 rounded-2xl px-5 py-4 shadow-2xl animate-in slide-in-from-top-4 duration-300">
+          <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+            toast.type === 'success' ? 'bg-emerald-500/10 text-emerald-400' :
+            toast.type === 'error' ? 'bg-rose-500/10 text-rose-400' :
+            'bg-blue-500/10 text-blue-400'
+          }`}>
+            <span className="material-icons-round text-lg">
+              {toast.type === 'success' ? 'check_circle' :
+               toast.type === 'error' ? 'error' :
+               'info'}
+            </span>
+          </div>
+          <div className="flex-1">
+            <p className="text-xs font-black uppercase tracking-widest text-slate-400">Thông báo</p>
+            <p className="text-xs font-bold text-white mt-0.5 leading-relaxed">{toast.message}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

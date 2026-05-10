@@ -29,7 +29,6 @@ const navItems: NavItem[] = [
   { 
     id: 'grp_outbound', label: '2. Đơn xuất', icon: 'logout',
     children: [
-      { id: 'grp_outbound', label: 'Danh sách đơn', icon: 'receipt_long' },
       { id: 'proc_pick', label: 'Soạn đơn', icon: 'panning_alt' },
       { id: 'proc_pack', label: 'Đóng gói', icon: 'inventory_2' },
       { id: 'proc_route', label: 'Xếp tuyến', icon: 'fork_right' },
@@ -224,8 +223,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
                     if (hasChildren) {
                       const willExpand = !isExpanded;
                       setExpandedMenu(willExpand ? (item.id as string) : null);
-                      if (willExpand && item.children && item.children.length > 0) {
-                        handlePageChange(item.children[0].id as PageType);
+                      if (willExpand) {
+                        if (item.id === 'grp_outbound') {
+                          handlePageChange('grp_outbound');
+                        } else if (item.children && item.children.length > 0) {
+                          handlePageChange(item.children[0].id as PageType);
+                        }
                       }
                     } else {
                       handlePageChange(item.id as PageType);
