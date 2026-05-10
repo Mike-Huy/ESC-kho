@@ -345,8 +345,8 @@ const ProductList: React.FC = () => {
                       <td className="px-6 py-0.5 font-mono text-xs text-primary font-bold">
                         {product.product_code}
                       </td>
-                      <td className="px-6 py-0.5">
-                        <div className="font-bold text-slate-700 text-[13px] leading-tight py-0.5">{product.product_long}</div>
+                      <td className="px-6 py-0.5 max-w-[400px]">
+                        <div className="font-bold text-slate-700 text-[13px] leading-tight py-0.5 truncate" title={product.product_long}>{product.product_long}</div>
                       </td>
                       <td className="px-6 py-0.5 text-slate-500 text-xs font-semibold">
                         {product.unit}

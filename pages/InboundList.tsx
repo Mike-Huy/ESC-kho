@@ -125,50 +125,50 @@ const InboundList: React.FC<InboundListProps> = ({ onReceive, onNew, hideHeader 
                 </tr>
               ) : filteredPos.length === 0 ? (
                 <tr>
-                   <td colSpan={6} className="py-20 text-center text-slate-400 font-bold">Không tìm thấy đơn hàng nào</td>
+                   <td colSpan={6} className="py-20 text-center text-slate-400 font-bold">Không tìm thấy đơn hàng nào.</td>
                 </tr>
               ) : (
                 filteredPos.map((po) => (
                   <tr key={po.id} className="group hover:bg-slate-50/80 transition-all">
-                    <td className="px-8 py-1.5">
+                    <td className="px-8 py-0.5">
                        <button 
                          onClick={() => onReceive(po.po_code)}
-                         className="font-mono font-black text-primary bg-primary/5 px-3 py-1.5 rounded-lg border border-primary/10 hover:bg-primary hover:text-white transition-all scale-95 active:scale-90"
+                         className="font-mono font-black text-primary bg-primary/5 px-3 py-1 rounded-lg border border-primary/10 hover:bg-primary hover:text-white transition-all scale-95 active:scale-90"
                        >
                          {po.po_code}
                        </button>
                     </td>
-                    <td className="px-8 py-1.5">
-                       <div className="font-bold text-slate-800 uppercase tracking-tighter">{po.supplier_name}</div>
+                    <td className="px-8 py-0.5 max-w-[280px]">
+                       <div className="font-bold text-slate-800 uppercase tracking-tighter truncate py-0.5" title={po.supplier_name}>{po.supplier_name}</div>
                     </td>
-                    <td className="px-8 py-1.5">
+                    <td className="px-8 py-0.5">
                        <div className="text-sm font-bold text-slate-600">{new Date(po.order_date).toLocaleDateString('vi-VN')}</div>
                     </td>
-                    <td className="px-8 py-1.5">
+                    <td className="px-8 py-0.5">
                        <div className="text-sm font-black text-slate-900">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(po.total_amount || 0)}</div>
                     </td>
-                    <td className="px-8 py-3 text-center">
-                       <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${getStatusStyle(po.status)}`}>
+                    <td className="px-8 py-0.5 text-center">
+                       <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${getStatusStyle(po.status)}`}>
                          {po.status === 'received' ? 'Đã nhận' : 
                           po.status === 'pending' ? 'Chờ nhận' : 
                           po.status === 'draft' ? 'Nháp' : po.status}
                        </span>
                     </td>
-                    <td className="px-8 py-3 text-right">
-                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                    <td className="px-8 py-0.5 text-right">
+                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all py-0.5">
                           {(po.status === 'pending' || po.status === 'draft') && (
                             <button 
                               onClick={() => onReceive(po.po_code)}
-                              className="px-4 py-2 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-700 shadow-md shadow-primary/20"
+                              className="px-3 py-1.5 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-700 shadow-md shadow-primary/20"
                             >
                               Nhận Hàng
                             </button>
                           )}
                           <button 
                             onClick={() => onReceive(po.po_code)}
-                            className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm"
+                            className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm"
                           >
-                             <span className="material-icons-round text-xl">visibility</span>
+                             <span className="material-icons-round text-lg">visibility</span>
                           </button>
                        </div>
                     </td>

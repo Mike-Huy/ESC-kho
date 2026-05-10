@@ -597,8 +597,10 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail, statusFilter = '', 
                     <td className="px-6 py-0.5">
                       <span className="font-black text-primary text-sm tracking-tight leading-none">{order.id}</span>
                     </td>
-                    <td className="px-6 py-0.5">
-                      <span className="font-black text-slate-800 text-sm leading-none">{order.customer}</span>
+                    <td className="px-6 py-0.5 max-w-[280px]">
+                      <div className="font-black text-slate-800 text-sm leading-none truncate" title={order.customer}>
+                        {order.customer}
+                      </div>
                     </td>
                     <td className="px-6 py-0.5 text-center">{getStatusBadge(order.status)}</td>
                     <td className="px-6 py-0.5 text-[12px] text-slate-500 font-black leading-none">{order.date}</td>

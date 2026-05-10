@@ -369,9 +369,9 @@ const SupplierList: React.FC = () => {
                         <td className="px-6 py-0.5 font-mono text-xs text-primary font-bold">
                           {supplier.supplier_code}
                         </td>
-                        <td className="px-6 py-0.5">
-                          <div className="font-bold text-slate-700 text-[13px] leading-tight py-0.5">{supplier.supplier_name}</div>
-                          <div className="text-[11px] text-slate-400 font-semibold leading-tight">{supplier.address}</div>
+                        <td className="px-6 py-0.5 max-w-[280px]">
+                          <div className="font-bold text-slate-700 text-[13px] leading-tight py-0.5 truncate" title={supplier.supplier_name}>{supplier.supplier_name}</div>
+                          <div className="text-[11px] text-slate-400 font-semibold leading-tight truncate" title={supplier.address}>{supplier.address}</div>
                         </td>
                         <td className="px-6 py-0.5 text-slate-500 text-xs font-semibold">
                           {supplier.phone || '---'}
