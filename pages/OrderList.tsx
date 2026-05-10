@@ -493,15 +493,38 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail, statusFilter = '', 
   };
 
   const getStatusMeta = (status: string) => {
-    return STATUS_FLOW.find(s => s.value === status) || { value: status, label: status, icon: 'help', color: 'slate' };
+    const s = status?.toLowerCase();
+    
+    if (s === 'pending' || s === 'new') {
+      return { value: 'new', label: 'MỚI', icon: 'inbox', color: 'blue' };
+    }
+    if (s === 'picking') {
+      return { value: 'picking', label: 'ĐANG SOẠN', icon: 'checklist', color: 'amber' };
+    }
+    if (s === 'packing' || s === 'processing') {
+      return { value: 'packing', label: 'ĐANG ĐÓNG', icon: 'inventory_2', color: 'indigo' };
+    }
+    if (s === 'routing') {
+      return { value: 'routing', label: 'SẮP TUYẾN', icon: 'alt_route', color: 'purple' };
+    }
+    if (s === 'shipped' || s === 'completed' || s === 'delivered') {
+      return { value: 'shipped', label: 'ĐÃ BÀN GIAO', icon: 'task_alt', color: 'emerald' };
+    }
+    if (s === 'cancelled') {
+      return { value: 'cancelled', label: 'ĐÃ HỦY', icon: 'cancel', color: 'slate' };
+    }
+    
+    return { value: status, label: status.toUpperCase(), icon: 'help', color: 'slate' };
   };
 
   const getStatusBadge = (status: string) => {
     const s = status?.toLowerCase();
-    if (s === 'cancelled') {
-      return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-black bg-slate-100 text-slate-500 border border-slate-200 uppercase tracking-tighter"><span className="w-1.5 h-1.5 rounded-full bg-slate-400 mr-2"></span>Đã hủy</span>;
-    }
     const meta = getStatusMeta(s);
+    
+    if (meta.value === 'cancelled') {
+      return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-black bg-slate-100 text-slate-500 border border-slate-200 uppercase tracking-tighter"><span className="w-1.5 h-1.5 rounded-full bg-slate-400 mr-2"></span>ĐÃ HỦY</span>;
+    }
+    
     const colorMap: Record<string, string> = {
       blue:    'bg-blue-50 text-blue-600 border-blue-100',
       amber:   'bg-amber-50 text-amber-600 border-amber-100',
@@ -514,7 +537,7 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail, statusFilter = '', 
       blue: 'bg-blue-500', amber: 'bg-amber-500', indigo: 'bg-indigo-500',
       purple: 'bg-purple-500', emerald: 'bg-emerald-500', slate: 'bg-slate-400',
     };
-    const isActive = !['shipped', 'cancelled', 'completed'].includes(s);
+    const isActive = !['shipped', 'cancelled', 'completed', 'delivered'].includes(meta.value);
     return (
       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-black border uppercase tracking-tighter ${colorMap[meta.color] || colorMap.slate}`}>
         <span className={`w-1.5 h-1.5 rounded-full mr-2 ${dotMap[meta.color] || dotMap.slate} ${isActive ? 'animate-pulse' : ''}`}></span>

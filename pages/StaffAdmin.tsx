@@ -243,12 +243,14 @@ const StaffAdmin: React.FC = () => {
                           </td>
                           <td className="px-6 py-4">
                              {row.status === 'working' ? (
-                                <div className="flex items-center gap-2 text-emerald-600 text-sm font-bold"><span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> Đang làm việc</div>
-                             ) : row.status === 'break' ? (
-                                <div className="flex items-center gap-2 text-amber-600 text-sm font-bold"><span className="w-2 h-2 bg-amber-500 rounded-full"></span> Nghỉ giữa ca</div>
-                             ) : (
-                                <div className="flex items-center gap-2 text-slate-400 text-sm font-bold"><span className="w-2 h-2 bg-slate-300 rounded-full"></span> Nghỉ ca</div>
-                             )}
+                                 <div className="flex items-center gap-2 text-emerald-600 text-sm font-bold"><span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> Đang làm việc</div>
+                              ) : row.status === 'done' ? (
+                                 <div className="flex items-center gap-2 text-emerald-600 text-sm font-bold"><span className="w-2 h-2 bg-emerald-500 rounded-full"></span> Đã ra về</div>
+                              ) : row.status === 'break' ? (
+                                 <div className="flex items-center gap-2 text-amber-600 text-sm font-bold"><span className="w-2 h-2 bg-amber-500 rounded-full"></span> Nghỉ giữa ca</div>
+                              ) : (
+                                 <div className="flex items-center gap-2 text-slate-400 text-sm font-bold"><span className="w-2 h-2 bg-slate-300 rounded-full"></span> Nghỉ ca</div>
+                              )}
                           </td>
                           <td className="px-6 py-4 text-center font-bold text-sm text-slate-700">{row.in}</td>
                           <td className="px-6 py-4 text-center font-medium text-sm text-slate-400">{row.out}</td>
