@@ -52,14 +52,48 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onLoginSuccess }) => {
 
       const erp_role = (staffProfile as any)?.erp_role;
 
+      // Fetch direct permissions
+      const { data: directPerms } = await supabase
+        .from(TABLE('user_permissions'))
+        .select('*')
+        .eq('user_id', user.id);
+
+      let allowedModules = staffProfile?.allowed_modules || [];
+      let roleLabel = erp_role?.label || null;
+      let roleName = erp_role?.name || null;
+      let roleColor = erp_role?.color || null;
+
+      if (directPerms && directPerms.length > 0) {
+        // If there are direct permissions, filter by can_read and set custom labels
+        allowedModules = directPerms
+          .filter((p: any) => p.can_read === true)
+          .map((p: any) => p.module);
+        
+        roleLabel = "Quyền trực tiếp";
+        roleName = "custom_permissions";
+        roleColor = "#ec4899"; // Pink to indicate premium custom permission level
+      } else if (staffProfile?.erp_role_id) {
+        // Otherwise, fetch from role permissions
+        const { data: rolePerms } = await supabase
+          .from(TABLE('erp_role_permissions'))
+          .select('*')
+          .eq('role_id', staffProfile.erp_role_id);
+        
+        if (rolePerms) {
+          allowedModules = rolePerms
+            .filter((p: any) => p.can_read === true)
+            .map((p: any) => p.module);
+        }
+      }
+
       const userData = {
         ...user,
         staffProfile: staffProfile || null,
         isSuperAdmin: user.is_super_admin === true,
-        allowedModules: staffProfile?.allowed_modules || [],
-        roleLabel: erp_role?.label || null,
-        roleName: erp_role?.name || null,
-        roleColor: erp_role?.color || null,
+        allowedModules: allowedModules,
+        roleLabel: roleLabel,
+        roleName: roleName,
+        roleColor: roleColor,
       };
 
       localStorage.setItem('wms_user', JSON.stringify(userData));
