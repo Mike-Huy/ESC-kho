@@ -6,6 +6,7 @@ export interface UserData {
   id: number;
   phone: string;
   full_name: string;
+  nick_name?: string;
   avatar?: string;
   isSuperAdmin: boolean;
   allowedModules: string[];
@@ -337,7 +338,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
             
             <div className="hidden sm:flex items-center gap-3 pl-2">
               <div className="text-right">
-                <p className="text-sm font-bold text-slate-900 leading-none">{user?.full_name || 'Người dùng'}</p>
+                <p className="text-sm font-bold text-slate-900 leading-none">{user?.nick_name || user?.full_name || 'Người dùng'}</p>
                 <p
                   className="text-[10px] font-bold uppercase tracking-wider mt-1"
                   style={{ color: user?.roleColor || (user?.isSuperAdmin ? '#ef4444' : '#3b82f6') }}
@@ -351,7 +352,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
               <div className="relative group">
                 <div className="w-10 h-10 rounded-full border-2 border-white shadow-md overflow-hidden bg-slate-100 cursor-pointer transition-transform active:scale-95">
                   <img 
-                    src={user?.avatar || "https://lh3.googleusercontent.com/aida-public/AB6AXuDVzLvkJIdAaJAEd2-mZQ2Exovadg1pYx3BKGoMeVNkIUaI4hRmWdFDXX9VUlqPMwE9r-Xm4zpP9cAqP-wfts5jJOB5LPtA6l7d0W__i7xCJ2fJ40GhBnkiMg6LzBuBtruLnrV8xzyldIKZzpgkpjIAqP6PwlRyrMHKrbXKsXIb_31U66S9kGs-uHj6c8EEBXrNnnmkhICniJKNVAPl9oZIQqiNkera16ObwENxA1DXo1B1Gh1hPg3CwVUol05bFhuBjNmiBTjLK5WA"} 
+                    src={user?.avatar || "/ESC__logo-01.jpg"} 
                     alt="User" 
                     className="w-full h-full object-cover" 
                   />
@@ -369,7 +370,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
             </div>
             {/* Mobile User Icon - Only visible on very small screens if needed, otherwise hidden */}
              <div className="sm:hidden w-8 h-8 rounded-full bg-slate-200 overflow-hidden">
-               <img src={user?.avatar || "https://lh3.googleusercontent.com/aida-public/AB6AXuDVzLvkJIdAaJAEd2-mZQ2Exovadg1pYx3BKGoMeVNkIUaI4hRmWdFDXX9VUlqPMwE9r-Xm4zpP9cAqP-wfts5jJOB5LPtA6l7d0W__i7xCJ2fJ40GhBnkiMg6LzBuBtruLnrV8xzyldIKZzpgkpjIAqP6PwlRyrMHKrbXKsXIb_31U66S9kGs-uHj6c8EEBXrNnnmkhICniJKNVAPl9oZIQqiNkera16ObwENxA1DXo1B1Gh1hPg3CwVUol05bFhuBjNmiBTjLK5WA"} className="w-full h-full object-cover" />
+               <img src={user?.avatar || "/ESC__logo-01.jpg"} className="w-full h-full object-cover" />
              </div>
           </div>
         </header>
