@@ -37,11 +37,10 @@ BEGIN
 
   -- ===========================================================
   -- BƯỚC 4: Cấu hình quyền CRUD cho từng role × module
-  -- Modules: inbound | orders | outbound | inventory | reports | operation | hr | finance
+  -- Modules: inbound | orders | outbound | inventory | reports | operation | hr | finance | settings
   -- ===========================================================
 
   -- ----- CUSTOMER (level 1) -----
-  -- Chỉ xem đơn bán (orders), không có gì khác
   INSERT INTO esc_erp_role_permissions (role_id, module, can_read, can_add, can_edit, can_delete, website_id) VALUES
     (id_customer, 'inbound',   FALSE, FALSE, FALSE, FALSE, ARRAY[9]),
     (id_customer, 'orders',    TRUE,  FALSE, FALSE, FALSE, ARRAY[9]),
@@ -50,10 +49,10 @@ BEGIN
     (id_customer, 'reports',   FALSE, FALSE, FALSE, FALSE, ARRAY[9]),
     (id_customer, 'operation', FALSE, FALSE, FALSE, FALSE, ARRAY[9]),
     (id_customer, 'hr',        FALSE, FALSE, FALSE, FALSE, ARRAY[9]),
-    (id_customer, 'finance',   FALSE, FALSE, FALSE, FALSE, ARRAY[9]);
+    (id_customer, 'finance',   FALSE, FALSE, FALSE, FALSE, ARRAY[9]),
+    (id_customer, 'settings',  FALSE, FALSE, FALSE, FALSE, ARRAY[9]);
 
   -- ----- STAFF (level 2) -----
-  -- Thao tác nhập/xuất/tồn kho hàng ngày, không xóa, không quản lý
   INSERT INTO esc_erp_role_permissions (role_id, module, can_read, can_add, can_edit, can_delete, website_id) VALUES
     (id_staff, 'inbound',   TRUE,  TRUE,  TRUE,  FALSE, ARRAY[9]),
     (id_staff, 'orders',    TRUE,  TRUE,  TRUE,  FALSE, ARRAY[9]),
@@ -62,10 +61,10 @@ BEGIN
     (id_staff, 'reports',   FALSE, FALSE, FALSE, FALSE, ARRAY[9]),
     (id_staff, 'operation', TRUE,  TRUE,  FALSE, FALSE, ARRAY[9]),
     (id_staff, 'hr',        FALSE, FALSE, FALSE, FALSE, ARRAY[9]),
-    (id_staff, 'finance',   FALSE, FALSE, FALSE, FALSE, ARRAY[9]);
+    (id_staff, 'finance',   FALSE, FALSE, FALSE, FALSE, ARRAY[9]),
+    (id_staff, 'settings',  FALSE, FALSE, FALSE, FALSE, ARRAY[9]);
 
   -- ----- LEADER (level 3) -----
-  -- Thêm: xem báo cáo, duyệt/sửa vận hành, xem nhân sự
   INSERT INTO esc_erp_role_permissions (role_id, module, can_read, can_add, can_edit, can_delete, website_id) VALUES
     (id_leader, 'inbound',   TRUE,  TRUE,  TRUE,  FALSE, ARRAY[9]),
     (id_leader, 'orders',    TRUE,  TRUE,  TRUE,  FALSE, ARRAY[9]),
@@ -74,10 +73,11 @@ BEGIN
     (id_leader, 'reports',   TRUE,  FALSE, FALSE, FALSE, ARRAY[9]),
     (id_leader, 'operation', TRUE,  TRUE,  TRUE,  FALSE, ARRAY[9]),
     (id_leader, 'hr',        TRUE,  FALSE, FALSE, FALSE, ARRAY[9]),
-    (id_leader, 'finance',   FALSE, FALSE, FALSE, FALSE, ARRAY[9]);
+    (id_leader, 'finance',   FALSE, FALSE, FALSE, FALSE, ARRAY[9]),
+    (id_leader, 'settings',  FALSE, FALSE, FALSE, FALSE, ARRAY[9]);
 
   -- ----- ADMIN (level 4) -----
-  -- Full CRUD mọi thứ trừ xóa tài chính/nhân sự (bảo toàn audit trail)
+  -- Có quyền vào Cài đặt (xem/thêm/sửa, không xóa role/quyền)
   INSERT INTO esc_erp_role_permissions (role_id, module, can_read, can_add, can_edit, can_delete, website_id) VALUES
     (id_admin, 'inbound',   TRUE,  TRUE,  TRUE,  TRUE,  ARRAY[9]),
     (id_admin, 'orders',    TRUE,  TRUE,  TRUE,  TRUE,  ARRAY[9]),
@@ -86,10 +86,11 @@ BEGIN
     (id_admin, 'reports',   TRUE,  TRUE,  TRUE,  FALSE, ARRAY[9]),
     (id_admin, 'operation', TRUE,  TRUE,  TRUE,  TRUE,  ARRAY[9]),
     (id_admin, 'hr',        TRUE,  TRUE,  TRUE,  FALSE, ARRAY[9]),
-    (id_admin, 'finance',   TRUE,  TRUE,  TRUE,  FALSE, ARRAY[9]);
+    (id_admin, 'finance',   TRUE,  TRUE,  TRUE,  FALSE, ARRAY[9]),
+    (id_admin, 'settings',  TRUE,  TRUE,  TRUE,  FALSE, ARRAY[9]);
 
   -- ----- SUPER ADMIN (level 5) -----
-  -- Toàn quyền tuyệt đối, kể cả xóa
+  -- Toàn quyền tuyệt đối
   INSERT INTO esc_erp_role_permissions (role_id, module, can_read, can_add, can_edit, can_delete, website_id) VALUES
     (id_super, 'inbound',   TRUE, TRUE, TRUE, TRUE, ARRAY[9]),
     (id_super, 'orders',    TRUE, TRUE, TRUE, TRUE, ARRAY[9]),
@@ -98,7 +99,8 @@ BEGIN
     (id_super, 'reports',   TRUE, TRUE, TRUE, TRUE, ARRAY[9]),
     (id_super, 'operation', TRUE, TRUE, TRUE, TRUE, ARRAY[9]),
     (id_super, 'hr',        TRUE, TRUE, TRUE, TRUE, ARRAY[9]),
-    (id_super, 'finance',   TRUE, TRUE, TRUE, TRUE, ARRAY[9]);
+    (id_super, 'finance',   TRUE, TRUE, TRUE, TRUE, ARRAY[9]),
+    (id_super, 'settings',  TRUE, TRUE, TRUE, TRUE, ARRAY[9]);
 
 END $$;
 
@@ -130,17 +132,17 @@ WHERE sp.erp_role_id = r.id
   AND r.name = 'leader'
   AND r.website_id @> ARRAY[9];
 
--- admin: tất cả
+-- admin: tất cả + settings
 UPDATE esc_staff_profiles sp
-SET allowed_modules = ARRAY['inbound','orders','outbound','inventory','reports','operation','hr','finance']
+SET allowed_modules = ARRAY['inbound','orders','outbound','inventory','reports','operation','hr','finance','settings']
 FROM esc_erp_roles r
 WHERE sp.erp_role_id = r.id
   AND r.name = 'admin'
   AND r.website_id @> ARRAY[9];
 
--- super_admin: tất cả
+-- super_admin: tất cả + settings
 UPDATE esc_staff_profiles sp
-SET allowed_modules = ARRAY['inbound','orders','outbound','inventory','reports','operation','hr','finance']
+SET allowed_modules = ARRAY['inbound','orders','outbound','inventory','reports','operation','hr','finance','settings']
 FROM esc_erp_roles r
 WHERE sp.erp_role_id = r.id
   AND r.name = 'super_admin'

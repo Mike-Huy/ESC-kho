@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, TABLE } from '../supabaseClient';
 
 interface StaffProfileProps {
   staffId: number | null;
@@ -110,8 +110,8 @@ const StaffProfile: React.FC<StaffProfileProps> = ({ staffId, onBack }) => {
         if (!staffId) return;
         setLoading(true);
         const { data: u } = await supabase
-            .from('users')
-            .select('*, staff_profiles(*)')
+            .from(TABLE('users'))
+            .select('*, staff_profiles:esc_staff_profiles(*)')
             .eq('id', staffId)
             .single();
 
@@ -144,12 +144,12 @@ const StaffProfile: React.FC<StaffProfileProps> = ({ staffId, onBack }) => {
         setStaff(merged);
         setForm(merged);
 
-        const { data: tx } = await supabase.from('hr_transactions')
+        const { data: tx } = await supabase.from(TABLE('hr_transactions'))
             .select('*').eq('user_id', staffId).order('trans_date', { ascending: false });
         setTransactions(tx || []);
 
         const since = new Date(); since.setDate(since.getDate() - 30);
-        const { data: att } = await supabase.from('hr_attendance')
+        const { data: att } = await supabase.from(TABLE('hr_attendance'))
             .select('*').eq('user_id', staffId)
             .gte('work_date', since.toISOString().split('T')[0])
             .order('work_date', { ascending: false });
@@ -188,8 +188,8 @@ const StaffProfile: React.FC<StaffProfileProps> = ({ staffId, onBack }) => {
         };
 
         const [r1, r2] = await Promise.all([
-            supabase.from('users').update(usersFields).eq('id', staffId),
-            supabase.from('staff_profiles').upsert(profileFields, { onConflict: 'user_id' }),
+            supabase.from(TABLE('users')).update(usersFields).eq('id', staffId),
+            supabase.from(TABLE('staff_profiles')).upsert(profileFields, { onConflict: 'user_id' }),
         ]);
 
         if (r1.error || r2.error) {

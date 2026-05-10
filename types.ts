@@ -29,7 +29,9 @@ export type PageType =
   // Sản phẩm & Danh mục quản trị
   | 'product_list' | 'supplier_list' | 'customer_list'
   // Nhân sự
-  | 'hr_staff_list' | 'hr_staff_profile' | 'hr_salary_level' | 'hr_shifts' | 'hr_policy';
+  | 'hr_staff_list' | 'hr_staff_profile' | 'hr_salary_level' | 'hr_shifts' | 'hr_policy'
+  // Road Map
+  | 'roadmap';
 
 export interface NavItem {
   id: PageType | string;

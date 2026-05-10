@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, TABLE } from '../supabaseClient';
 import { APP_CONFIG } from '../appConfig';
 
 interface StaffCheckInProps {
@@ -23,7 +23,7 @@ const StaffCheckIn: React.FC<StaffCheckInProps> = ({ onExit, user }) => {
 
       // 1. Get today's record
       const { data: todayData, error: todayError } = await supabase
-        .from('hr_attendance')
+        .from(TABLE('hr_attendance'))
         .select('*')
         .eq('user_id', user.id)
         .eq('work_date', today)
@@ -34,7 +34,7 @@ const StaffCheckIn: React.FC<StaffCheckInProps> = ({ onExit, user }) => {
 
       // 2. Get recent history (past 7 days)
       const { data: historyData, error: historyError } = await supabase
-        .from('hr_attendance')
+        .from(TABLE('hr_attendance'))
         .select('*')
         .eq('user_id', user.id)
         .order('work_date', { ascending: false })
@@ -86,7 +86,7 @@ const StaffCheckIn: React.FC<StaffCheckInProps> = ({ onExit, user }) => {
       if (!currentAttendance) {
         // Perform Check-in
         const { error } = await supabase
-          .from('hr_attendance')
+          .from(TABLE('hr_attendance'))
           .insert({
             user_id: user.id,
             work_date: today,
@@ -98,7 +98,7 @@ const StaffCheckIn: React.FC<StaffCheckInProps> = ({ onExit, user }) => {
       } else if (!currentAttendance.check_out) {
         // Perform Check-out
         const { error } = await supabase
-          .from('hr_attendance')
+          .from(TABLE('hr_attendance'))
           .update({ check_out: now })
           .eq('id', currentAttendance.id);
         if (error) throw error;

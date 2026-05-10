@@ -40,6 +40,7 @@ import OpRepack from './pages/OpRepack';
 import OpAudit from './pages/OpAudit';
 import OpReplenish from './pages/OpReplenish';
 import OpTransfer from './pages/OpTransfer';
+import RoadMap from './pages/RoadMap';
 
 const App: React.FC = () => {
   const [activePage, setActivePage] = useState<PageType>('dashboard');
@@ -132,6 +133,9 @@ const App: React.FC = () => {
       case 'set_staff': return <ComingSoon title="Nhân viên" />;
       case 'set_permissions': return <RoleManagement />;
       case 'set_salary': return <ComingSoon title="Lương" />;
+
+      // Road Map
+      case 'roadmap': return <RoadMap user={user} />;
 
       // Nhân sự
       case 'hr_staff_list': return <StaffList onViewStaff={(id) => { setSelectedStaffId(id); setActivePage('hr_staff_profile'); }} />;

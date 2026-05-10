@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, TABLE } from '../supabaseClient';
 import { APP_CONFIG } from '../appConfig';
 
 interface StaffMember {
@@ -41,16 +41,16 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
       // Fetch staff from users joined with staff_profiles and hr_departments
       // We filter for products belonging to current website_id
       const { data, error } = await supabase
-        .from('users')
+        .from(TABLE('users'))
         .select(`
           id,
           full_name,
           phone,
           email,
           avatar,
-          staff_profiles!inner (
+          staff_profiles:esc_staff_profiles!inner (
             position,
-            hr_departments (
+            esc_hr_departments (
               name
             )
           )
@@ -73,7 +73,7 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
             phone: item.phone,
             email: item.email,
             avatar: item.avatar,
-            department: profile?.hr_departments?.name || '---',
+            department: profile?.esc_hr_departments?.name || '---',
             position: profile?.position || 'Nhân viên',
             status: 'Hoạt động'
           };
@@ -90,7 +90,7 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
 
   const fetchDepartments = async () => {
     const { data, error } = await supabase
-      .from('hr_departments')
+      .from(TABLE('hr_departments'))
       .select('id, name')
       .order('name');
     if (!error && data) {
@@ -117,7 +117,7 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
         // Update mode
         // 1. Update users
         const { error: userError } = await supabase
-          .from('users')
+          .from(TABLE('users'))
           .update({
             full_name: newStaff.fullName,
             phone: newStaff.phone
@@ -128,7 +128,7 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
 
         // 2. Update staff_profiles
         const { error: profileError } = await supabase
-          .from('staff_profiles')
+          .from(TABLE('staff_profiles'))
           .update({
             dept_id: parseInt(newStaff.deptId)
           })
@@ -141,7 +141,7 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
         // Insert mode
         // 1. Insert into users
         const { data: userData, error: userError } = await supabase
-          .from('users')
+          .from(TABLE('users'))
           .insert([{
             full_name: newStaff.fullName,
             phone: newStaff.phone,
@@ -156,7 +156,7 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
 
         // 2. Insert into staff_profiles
         const { error: profileError } = await supabase
-          .from('staff_profiles')
+          .from(TABLE('staff_profiles'))
           .insert([{
             user_id: userData.id,
             dept_id: parseInt(newStaff.deptId),
@@ -188,11 +188,11 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
     try {
       setLoading(true);
       // Delete staff_profiles first (child table)
-      const { error: pError } = await supabase.from('staff_profiles').delete().eq('user_id', member.id);
+      const { error: pError } = await supabase.from(TABLE('staff_profiles')).delete().eq('user_id', member.id);
       if (pError) throw pError;
 
       // Delete user
-      const { error: uError } = await supabase.from('users').delete().eq('id', member.id);
+      const { error: uError } = await supabase.from(TABLE('users')).delete().eq('id', member.id);
       if (uError) throw uError;
 
       alert('Đã xóa nhân viên thành công!');

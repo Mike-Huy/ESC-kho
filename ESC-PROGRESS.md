@@ -726,6 +726,91 @@ Flow: `new` → `picking` → `packing` → `routing` → `shipped`
 
 ====== KA - START ======
 
+## [2026-05-10] — Road Map module + Fix login sidebar trắng + Responsive mobile toàn app
+
+### 1. Fix lỗi admin không thấy sidebar (menu trống)
+
+**Root cause:** `LoginPopup.tsx` dùng foreign key join `erp_role:erp_role_id(name,label,color)` bị Supabase RLS chặn → trả 400 → toàn bộ staff_profile fetch thất bại → `allowed_modules` rỗng → sidebar trắng.
+
+**Fix (`components/LoginPopup.tsx`):**
+- Tách thành 2 query riêng biệt:
+  1. Fetch `esc_staff_profiles` với explicit columns (không join)
+  2. Nếu có `erp_role_id` → fetch `esc_erp_roles` riêng
+- Loại bỏ hoàn toàn foreign key join syntax
+
+---
+
+### 2. SQL patch: `database/patch_settings_module.sql`
+
+**Lỗi cũ:** `ERROR: 23502: null value in column 'role_id'` vì role `super_admin` không tồn tại trong DB → `id_super_admin` là NULL → INSERT bị crash.
+
+**Fix:**
+- Thêm `IF id_super_admin IS NOT NULL THEN ... END IF;` guard cho từng INSERT
+- Thêm `RAISE NOTICE` để debug khi role không tìm thấy
+
+---
+
+### 3. Module mới: Road Map (trang thứ 10)
+
+**File tạo mới: `pages/RoadMap.tsx`**
+- 3 tabs: **Project List** | **Road Map** | **Cài đặt**
+- **Tab Cài đặt**: Ma trận phân quyền CRUD
+  - Rows: 4 sections (projects, roadmap, budget, manage)
+  - Columns: các Role (customer → super_admin)
+  - Mỗi ô: 4 icon buttons (visibility / add_circle / edit / delete) — active = màu, inactive = opacity-20
+  - Data type mới: `RolePerms { can_read, can_add, can_edit, can_delete }`, `RoadMapSettings = Record<string, Record<string, RolePerms>>`
+- Load/save `permissions_json` JSONB từ `esc_roadmap_settings` table
+- Thành công: toast notification (không dùng alert())
+- Loading spinner khi fetch DB
+
+**File tạo mới: `database/migration_roadmap.sql`**
+- `esc_roadmap_projects`: status, progress, color, budget, website_id[]
+- `esc_roadmap_milestones`: sort_order, FK → projects
+- `esc_roadmap_tasks`: sort_order, FK → milestones
+- `esc_roadmap_settings`: `permissions_json JSONB` (NOT array columns cũ)
+- Seed data: 3 projects, 3 milestones, 9 tasks, default permissions cho website_id=9
+
+**Files đã sửa:**
+- `components/Layout.tsx`: Thêm menu item `{ id: 'roadmap', label: '10. Road Map', icon: 'map' }`, thêm `roadmap` vào `moduleMapping`
+- `types.ts`: Thêm `| 'roadmap'` vào `PageType`
+- `App.tsx`: Import + route `case 'roadmap': return <RoadMap user={user} />;`
+
+---
+
+### 4. Responsive mobile — Dashboard
+
+**File: `pages/Dashboard.tsx`**
+- Hero: `h-32 sm:h-40 md:h-48`, padding `px-4 sm:px-6 md:px-8`
+- Title: `text-xl sm:text-2xl md:text-3xl`
+- Wrapper: `p-3 sm:p-5 md:p-8`
+- Stat cards: `grid-cols-2 md:grid-cols-2 lg:grid-cols-4` (2 cột trên mobile)
+- Card padding: `p-3 sm:p-4 md:p-6`
+- Chart height: `h-48 sm:h-56 md:h-64`
+- Pie chart: `w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48`, % radii
+
+### 5. Responsive mobile — Layout FAB buttons
+
+**File: `components/Layout.tsx`**
+- FAB: `w-12 h-12 sm:w-11 sm:h-11`, `right-3 sm:right-6`, `bottom-4 sm:bottom-10`
+- Label tooltips: `hidden sm:block` (ẩn trên mobile)
+
+### 6. RoadMap settings — overflow-x-auto cho bảng ma trận trên mobile
+
+**File: `pages/RoadMap.tsx`**
+- Bọc bảng permission matrix trong `<div className="overflow-x-auto">`
+- Scroll ngang trên màn hình nhỏ
+
+---
+
+### Lưu ý quan trọng cho MI:
+- `esc_roadmap_settings` cũ (có array columns) đã DROP và CREATE lại với `permissions_json JSONB` — MIKE cần chạy `database/migration_roadmap.sql` trong Supabase SQL Editor
+- `allowed_modules` cho user cần có `'roadmap'` để thấy menu Road Map — cần UPDATE trong DB nếu chưa có
+- Login split query đã fix, không cần thay đổi gì thêm ở Frontend
+
+====== KA - END ======
+
+====== KA - START ======
+
 ## [2026-05-10] — Populate esc_inventory + Chấm công thực tế StaffAdmin
 
 ### 1. File tạo mới: `database/populate_inventory.sql`
@@ -775,6 +860,66 @@ Script SQL chạy 1 lần trong Supabase SQL Editor để tính tồn kho từ d
 - Hiện tại `'done'` rơi vào nhánh `else` → hiển thị "Nghỉ ca" (màu xám) — chưa chính xác về ngữ nghĩa. **MI cần thêm nhánh cho `'done'`** (ví dụ: badge xanh emerald "Đã ra về")
 - Stats `present` đã tính đúng: đếm cả `working`, `break`, `done`
 - Cần có data trong `esc_hr_attendance` trước thì mới thấy dữ liệu thực tế; nếu bảng trống → fallback mock
+
+====== KA - END ======
+
+====== KA - START ======
+
+## [2026-05-10] — Fix toàn bộ hệ thống phân quyền 3 lớp
+
+### Bugs đã tìm & fix:
+
+| # | Vấn đề | File | Fix |
+|---|--------|------|-----|
+| 1 | `esc_user_permissions` chưa tồn tại trong schema và RLS | — | Tạo mới `database/migration_user_permissions.sql` |
+| 2 | `RoleManagement.tsx` dùng tên bảng trực tiếp (không `TABLE()`) → lỗi tiền tố `esc_` | `RoleManagement.tsx` | Đổi toàn bộ sang `TABLE('erp_roles')`, `TABLE('erp_role_permissions')`, `TABLE('user_permissions')`, `TABLE('staff_profiles')` |
+| 3 | `savePermissions` dùng vòng lặp N queries | `RoleManagement.tsx` | Batch upsert 1 lần với `ON CONFLICT (role_id,module)` |
+| 4 | Sau khi lưu quyền Role → `allowed_modules` trong `staff_profiles` không được cập nhật → sidebar vẫn hiện menu cũ | `RoleManagement.tsx` | Tự động UPDATE `allowed_modules` cho tất cả user dùng Role đó (bỏ qua user có quyền riêng) |
+| 5 | Sau khi gán Role mới → `allowed_modules` không cập nhật | `RoleManagement.tsx` | Query `erp_role_permissions` → cập nhật `allowed_modules` |
+| 6 | State `has_direct_perms` chưa có → badge Tab 2 hiển thị sai | `RoleManagement.tsx` | Thêm field `has_direct_perms` vào `StaffMember`, query batch `esc_user_permissions` để build Set |
+| 7 | `LoginPopup.tsx`: Super Admin đi qua bảng quyền không cần thiết | `LoginPopup.tsx` | Tách nhánh riêng: `is_super_admin=true` → skip query, toàn quyền ngay |
+| 8 | `LoginPopup.tsx`: Khi user có `user_permissions` tất cả `can_read=false` → vẫn set `roleName='custom_permissions'` mà không fallback rõ ràng | `LoginPopup.tsx` | Giữ đúng: `allowedModules=[]`, sidebar trống (intentional behavior) — thêm log rõ ràng |
+| 9 | `LoginPopup.tsx`: Thiếu `contains('website_id')` khi query `user_permissions` → có thể lấy quyền của website khác | `LoginPopup.tsx` | Thêm `.contains('website_id', [APP_CONFIG.WEBSITE_ID])` |
+
+### Files tạo mới:
+
+**`database/migration_user_permissions.sql`** — Chạy 1 lần trong Supabase SQL Editor
+- Tạo bảng `esc_user_permissions` với UNIQUE `(user_id, module)`
+- Index: `user_id`, `website_id` (GIN)
+- RLS: Super Admin toàn quyền; đọc bản thân; Admin (level≥4) quản lý
+- Thêm function `app.is_admin_or_above()` để dùng trong RLS policy
+- Trigger `updated_at` tự động
+
+**`ROL-CONFIG-skill.md`** — Tài liệu kỹ thuật hoàn chỉnh về hệ thống phân quyền
+- Kiến trúc 4 lớp ưu tiên (super_admin → direct → role → cache)
+- Schema 4 bảng liên quan
+- Ma trận 5 role mặc định
+- Flow code chi tiết từng Tab
+- Thứ tự chạy SQL
+- Checklist kiểm tra sau deploy
+- Edge cases đã xử lý
+- Lưu ý cho MI
+
+### Files đã sửa:
+
+**`pages/RoleManagement.tsx`** — Viết lại hoàn toàn
+- Tách `PermissionTable` thành sub-component dùng chung Tab 1 và Tab 3
+- Helper `buildFullPermissions()` và `permsToAllowedModules()` tránh lặp code
+- Mọi query dùng `TABLE()` helper
+- Badge chính xác theo `has_direct_perms` + `erp_role_id`
+- Info banner trong Tab 2 giải thích hành vi xóa quyền riêng
+
+**`components/LoginPopup.tsx`**
+- Thêm nhánh `is_super_admin` riêng (bypass toàn bộ query quyền)
+- Thêm `permSource` log để debug: `super_admin | direct | role | cache`
+- Filter `website_id` khi query `user_permissions`
+- Comment rõ từng ưu tiên
+
+### Lưu ý quan trọng cho MI:
+
+1. **MIKE cần chạy `database/migration_user_permissions.sql`** trong Supabase SQL Editor trước khi Tab 3 hoạt động
+2. Tab 2 — Badge mới `"Quyền riêng (override Role)"` (màu hồng, icon `admin_panel_settings`) khi `has_direct_perms=true`
+3. **Tính năng chưa có:** Kiểm tra `can_add/can_edit/can_delete` trong từng trang để ẩn/hiện nút Thêm/Sửa/Xóa. Hiện tại chỉ kiểm tra `can_read` để ẩn/hiện menu sidebar. Nếu MIKE yêu cầu, cần lưu thêm object permissions đầy đủ vào localStorage lúc login và truyền vào từng page.
 
 ====== KA - END ======
 

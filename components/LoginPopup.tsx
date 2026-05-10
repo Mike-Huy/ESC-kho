@@ -39,10 +39,10 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onLoginSuccess }) => {
       // Step 3: Set RLS session
       await supabase.rpc('set_app_user', { uid: user.id });
 
-      // Step 4: Fetch staff profile + role info
+      // Step 4: Fetch staff profile
       const { data: staffProfile, error: profileError } = await supabase
         .from(TABLE('staff_profiles'))
-        .select('*, erp_role:erp_role_id(name, label, color)')
+        .select('id, user_id, erp_role_id, is_super_admin, allowed_modules, website_id')
         .eq('user_id', user.id)
         .single();
 
@@ -50,41 +50,81 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onLoginSuccess }) => {
         console.error('Error fetching staff profile:', profileError);
       }
 
-      const erp_role = (staffProfile as any)?.erp_role;
+      // Fetch role info riêng để tránh RLS block foreign key join
+      let erp_role: { name: string; label: string; color: string } | null = null;
+      if (staffProfile?.erp_role_id) {
+        const { data: roleData } = await supabase
+          .from(TABLE('erp_roles'))
+          .select('name, label, color')
+          .eq('id', staffProfile.erp_role_id)
+          .single();
+        erp_role = roleData;
+      }
 
-      // Fetch direct permissions
-      const { data: directPerms } = await supabase
-        .from(TABLE('user_permissions'))
-        .select('*')
-        .eq('user_id', user.id);
+      // Step 5: Xác định nguồn quyền theo thứ tự ưu tiên:
+      //   Ưu tiên 1 — Super Admin: toàn quyền tuyệt đối
+      //   Ưu tiên 2 — Quyền riêng (esc_user_permissions): override Role hoàn toàn
+      //   Ưu tiên 3 — Role (esc_erp_role_permissions): quyền theo nhóm
+      //   Fallback   — allowed_modules trong staff_profiles (cache)
 
-      let allowedModules = staffProfile?.allowed_modules || [];
-      let roleLabel = erp_role?.label || null;
-      let roleName = erp_role?.name || null;
-      let roleColor = erp_role?.color || null;
+      let allowedModules: string[] = [];
+      let roleLabel: string | null = null;
+      let roleName:  string | null = null;
+      let roleColor: string | null = null;
+      let permSource: 'super_admin' | 'direct' | 'role' | 'cache' = 'cache';
 
-      if (directPerms && directPerms.length > 0) {
-        // If there are direct permissions, filter by can_read and set custom labels
-        allowedModules = directPerms
-          .filter((p: any) => p.can_read === true)
-          .map((p: any) => p.module);
-        
-        roleLabel = "Quyền trực tiếp";
-        roleName = "custom_permissions";
-        roleColor = "#ec4899"; // Pink to indicate premium custom permission level
-      } else if (staffProfile?.erp_role_id) {
-        // Otherwise, fetch from role permissions
-        const { data: rolePerms } = await supabase
-          .from(TABLE('erp_role_permissions'))
-          .select('*')
-          .eq('role_id', staffProfile.erp_role_id);
-        
-        if (rolePerms) {
-          allowedModules = rolePerms
+      if (user.is_super_admin === true) {
+        // Super Admin: toàn quyền, không cần query thêm
+        allowedModules = ['inbound','orders','outbound','inventory','reports','operation','hr','finance','settings'];
+        roleLabel = 'Super Admin';
+        roleName  = 'super_admin';
+        roleColor = '#ef4444';
+        permSource = 'super_admin';
+
+      } else {
+        // Fetch quyền riêng trước (ưu tiên cao nhất)
+        const { data: directPerms } = await supabase
+          .from(TABLE('user_permissions'))
+          .select('module, can_read, can_add, can_edit, can_delete')
+          .eq('user_id', user.id)
+          .contains('website_id', [APP_CONFIG.WEBSITE_ID]);
+
+        if (directPerms && directPerms.length > 0) {
+          // Ưu tiên 2: Quyền riêng — chỉ lấy module có can_read=true
+          allowedModules = directPerms
             .filter((p: any) => p.can_read === true)
             .map((p: any) => p.module);
+          roleLabel  = 'Quyền trực tiếp';
+          roleName   = 'custom_permissions';
+          roleColor  = '#ec4899';
+          permSource = 'direct';
+
+        } else if (staffProfile?.erp_role_id) {
+          // Ưu tiên 3: Role — đọc từ esc_erp_role_permissions
+          const { data: rolePerms } = await supabase
+            .from(TABLE('erp_role_permissions'))
+            .select('module, can_read')
+            .eq('role_id', staffProfile.erp_role_id);
+
+          allowedModules = (rolePerms || [])
+            .filter((p: any) => p.can_read === true)
+            .map((p: any) => p.module);
+          roleLabel  = erp_role?.label || null;
+          roleName   = erp_role?.name  || null;
+          roleColor  = erp_role?.color || null;
+          permSource = 'role';
+
+        } else {
+          // Fallback: đọc cache allowed_modules trong staff_profiles
+          allowedModules = staffProfile?.allowed_modules || [];
+          roleLabel  = erp_role?.label || null;
+          roleName   = erp_role?.name  || null;
+          roleColor  = erp_role?.color || null;
+          permSource = 'cache';
         }
       }
+
+      console.log(`[Login] Perm source: ${permSource} | Modules: ${allowedModules.join(', ')|| '(none)'}`);
 
       const userData = {
         ...user,

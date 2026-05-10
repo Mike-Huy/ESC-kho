@@ -90,13 +90,16 @@ const navItems: NavItem[] = [
       { id: 'customer_list',  label: 'Khách hàng',    icon: 'people_alt' },
     ]
   },
-  { 
+  {
     id: 'grp_settings', label: '9. Cài đặt', icon: 'settings',
     children: [
       { id: 'staffAdmin', label: 'Nhân viên', icon: 'manage_accounts' },
       { id: 'set_permissions', label: 'Phân quyền', icon: 'security' },
       { id: 'set_salary', label: 'Lương', icon: 'price_check' },
     ]
+  },
+  {
+    id: 'roadmap', label: '10. Road Map', icon: 'map',
   }
 ];
 
@@ -123,49 +126,69 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
 
   // Filter navigation items based on user permissions
   const filteredNavItems = navItems.filter(item => {
-    // If no user, show nothing (should not happen if Layout is rendered)
     if (!user) return false;
-    
-    // Super Admins see everything
+
+    // Super Admin thấy tất cả
     if (user.isSuperAdmin) return true;
-    
-    // Safety Fallback: If allowedModules is missing or empty, show ALL items for now 
-    // to prevent blank sidebar, especially for staff users.
-    const allowedModules = user.allowedModules;
-    if (!allowedModules || (Array.isArray(allowedModules) && allowedModules.length === 0)) {
-      return true;
-    }
-    
-    // Mapping structure for permissions
-    const moduleMapping: Record<string, string> = {
-      'grp_inbound': 'inbound',
-      'grp_outbound': 'outbound',
+
+    // Map từng nhóm menu → tên module trong allowedModules
+    const moduleMapping: Record<string, string | null> = {
+      'grp_inbound':   'inbound',
+      'grp_outbound':  'outbound',
       'grp_warehouse': 'inventory',
-      'grp_report': 'reports',
+      'grp_report':    'reports',
       'grp_operation': 'operation',
-      'grp_hr': 'hr',
-      'grp_finance': 'finance',
-      'grp_master': 'inventory',
-      'grp_settings': 'hr'
+      'grp_hr':        'hr',
+      'grp_finance':   'finance',
+      'grp_master':    'inventory_master',
+      'grp_settings':  'settings',
+      'roadmap':       'roadmap',
     };
-    
+
     const requiredModule = moduleMapping[item.id as string];
-    if (!requiredModule) return true; // Show items with no mapping by default
-    
-    // If it's a string (e.g. from legacy data), check inclusion. If array, check inclusion.
-    try {
-      if (Array.isArray(allowedModules)) {
-        return allowedModules.includes(requiredModule);
-      }
-      if (typeof allowedModules === 'string') {
-        return (allowedModules as string).includes(requiredModule);
-      }
-    } catch (e) {
-      console.error("Permission check error:", e);
-      return true; // Fallback to showing item on error
-    }
-    
-    return true; // Final fallback to show item
+
+    // Menu không có trong mapping (vd: dashboard) → luôn hiện
+    if (requiredModule === undefined) return true;
+
+    // Menu map về null → luôn hiện (không cần quyền)
+    if (requiredModule === null) return true;
+
+    const allowed = user.allowedModules;
+    if (!allowed || !Array.isArray(allowed)) return false;
+
+    // Cho phép hiện nhóm cha nếu nhóm cha được check, HOẶC bất kỳ menu con nào của nó được check!
+    const parentAllowed = allowed.includes(requiredModule);
+    const anyChildAllowed = item.children?.some(child => allowed.includes(child.id)) || false;
+
+    return parentAllowed || anyChildAllowed;
+  }).map(item => {
+    if (!item.children || user?.isSuperAdmin) return item;
+
+    const moduleMapping: Record<string, string | null> = {
+      'grp_inbound':   'inbound',
+      'grp_outbound':  'outbound',
+      'grp_warehouse': 'inventory',
+      'grp_report':    'reports',
+      'grp_operation': 'operation',
+      'grp_hr':        'hr',
+      'grp_finance':   'finance',
+      'grp_master':    'inventory_master',
+      'grp_settings':  'settings',
+      'roadmap':       'roadmap',
+    };
+    const parentModule = moduleMapping[item.id as string];
+    const allowed = user?.allowedModules || [];
+
+    // Lọc các menu con của nhóm cha
+    const filteredChildren = item.children.filter(child => {
+      // Hiện nếu menu con đó được phân quyền cụ thể HOẶC nhóm cha có quyền chung
+      return allowed.includes(child.id) || (parentModule && allowed.includes(parentModule));
+    });
+
+    return {
+      ...item,
+      children: filteredChildren
+    };
   });
 
   // Special full-screen layout for mobile check-in
@@ -376,27 +399,27 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
         </header>
         
         {/* Floating Action Buttons Area - Right Fixed */}
-        <div className="fixed right-6 bottom-10 z-[60] flex flex-col gap-3">
-          <button 
+        <div className="fixed right-3 sm:right-6 bottom-4 sm:bottom-10 z-[60] flex flex-col gap-2 sm:gap-3">
+          <button
             onClick={() => setActivePage('scanner')}
             className="group flex items-center justify-end gap-2 transition-all"
           >
-            <span className="bg-white px-2 py-1 rounded-md shadow-lg text-[10px] font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity border border-slate-100">
+            <span className="bg-white px-2 py-1 rounded-md shadow-lg text-[10px] font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity border border-slate-100 hidden sm:block">
               Quét mã vạch
             </span>
-            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shadow-xl transition-all active:scale-90 ${activePage === 'scanner' ? 'bg-primary text-white scale-105 shadow-primary/30' : 'bg-white text-slate-600 hover:text-primary'}`}>
+            <div className={`w-12 h-12 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shadow-xl transition-all active:scale-90 ${activePage === 'scanner' ? 'bg-primary text-white scale-105 shadow-primary/30' : 'bg-white text-slate-600 hover:text-primary'}`}>
               <span className="material-icons-round text-xl">qr_code_scanner</span>
             </div>
           </button>
 
-          <button 
+          <button
             onClick={() => setActivePage('staffCheckIn')}
             className="group flex items-center justify-end gap-2 transition-all"
           >
-            <span className="bg-white px-2 py-1 rounded-md shadow-lg text-[10px] font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity border border-slate-100">
+            <span className="bg-white px-2 py-1 rounded-md shadow-lg text-[10px] font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity border border-slate-100 hidden sm:block">
               Chấm công
             </span>
-            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shadow-xl transition-all active:scale-90 ${activePage === 'staffCheckIn' ? 'bg-primary text-white scale-105 shadow-primary/30' : 'bg-white text-slate-600 hover:text-emerald-500'}`}>
+            <div className={`w-12 h-12 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shadow-xl transition-all active:scale-90 ${activePage === 'staffCheckIn' ? 'bg-primary text-white scale-105 shadow-primary/30' : 'bg-white text-slate-600 hover:text-emerald-500'}`}>
               <span className="material-icons-round text-xl">fingerprint</span>
             </div>
           </button>
