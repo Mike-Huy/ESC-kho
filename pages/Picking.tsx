@@ -25,7 +25,6 @@ const Picking: React.FC = () => {
   const fetchPickingOrders = async () => {
     try {
       setLoading(true);
-      // In a real scenario, we'd filter by status 'pending' or 'new'
       const { data, error } = await supabase
         .from(TABLE('so'))
         .select(`
@@ -34,11 +33,11 @@ const Picking: React.FC = () => {
           customer_name,
           status,
           created_at,
-          so_items (
+          ${TABLE('so_items')}!inner (
             id,
             product_code,
             qty,
-            product:product_code (
+            ${TABLE('product')}!inner (
               product_long,
               unit,
               website_id
@@ -46,22 +45,50 @@ const Picking: React.FC = () => {
           )
         `)
         .contains('website_id', [APP_CONFIG.WEBSITE_ID])
-        .filter('so_items.product.website_id', 'cs', `{${APP_CONFIG.WEBSITE_ID}}`)
-        .in('status', ['pending', 'new', 'processing'])
+        .filter(`${TABLE('so_items')}.${TABLE('product')}.website_id`, 'cs', `{${APP_CONFIG.WEBSITE_ID}}`)
+        .in('status', ['pending', 'new'])
         .order('created_at', { ascending: true });
 
       if (error) throw error;
 
       if (data) {
-        setOrders(data.map((o: any) => ({
-          ...o,
-          total_items: o.so_items?.reduce((acc: number, item: any) => acc + (Number(item.qty) || 0), 0) || 0,
-          picked_items: 0, // Mocking picked status
-          items: o.so_items
-        })));
+        setOrders(data.map((o: any) => {
+          const rawItems = o[TABLE('so_items')] || [];
+          return {
+            ...o,
+            total_items: rawItems.reduce((acc: number, item: any) => acc + (Number(item.qty) || 0), 0) || 0,
+            picked_items: 0,
+            items: rawItems.map((item: any) => ({
+              ...item,
+              product: item[TABLE('product')]
+            }))
+          };
+        }));
       }
     } catch (error) {
       console.error('Error fetching picking orders:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFinishPicking = async () => {
+    if (!selectedOrder) return;
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from(TABLE('so'))
+        .update({ status: 'processing' })
+        .eq('so_code', selectedOrder.so_code);
+
+      if (error) throw error;
+
+      alert(`Đã hoàn tất soạn hàng đơn #${selectedOrder.so_code}! Đơn hàng đã chuyển sang trạng thái "ĐÓNG GÓI".`);
+      setSelectedOrder(null);
+      fetchPickingOrders();
+    } catch (err) {
+      console.error('Error completing picking:', err);
+      alert('Có lỗi xảy ra khi hoàn tất soạn hàng.');
     } finally {
       setLoading(false);
     }
@@ -84,7 +111,7 @@ const Picking: React.FC = () => {
               <p className="text-slate-500 text-xs font-black uppercase tracking-widest">{selectedOrder.customer_name}</p>
             </div>
           </div>
-          <button className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-200">HOÀN TẤT SOẠN HÀNG</button>
+          <button onClick={handleFinishPicking} className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-200">HOÀN TẤT SOẠN HÀNG</button>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -151,44 +178,75 @@ const Picking: React.FC = () => {
           <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto"></div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {orders.map((order) => (
-            <div key={order.id} className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 p-6 hover:border-primary/30 transition-all group overflow-hidden relative">
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <span className="text-primary font-black text-lg tracking-tight mb-1 block">#{order.so_code}</span>
-                  <h4 className="font-black text-slate-800 text-sm uppercase tracking-tight leading-snug">{order.customer_name}</h4>
-                </div>
-                <span className="text-[10px] bg-blue-50 text-blue-600 px-3 py-1 rounded-full font-black uppercase tracking-widest border border-blue-100">
-                  {order.status === 'pending' ? 'MỚI' : 'ĐANG XỬ LÝ'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-2">
-                  <span className="material-icons-round text-slate-300">inventory_2</span>
-                  <span className="text-xs font-black text-slate-500 uppercase tracking-widest">{order.total_items} MẶT HÀNG</span>
-                </div>
-                <div className="text-xs font-black text-slate-400">
-                  {new Date(order.created_at).toLocaleDateString('vi-VN')}
-                </div>
-              </div>
-
-              <button 
-                onClick={() => handlePickStart(order)}
-                className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2"
-              >
-                <span className="material-icons-round text-lg">panning_alt</span>
-                BẮT ĐẦU SOẠN HÀNG
-              </button>
-            </div>
-          ))}
-
-          {orders.length === 0 && (
-            <div className="col-span-full py-20 text-center opacity-30">
+        <div className="space-y-4">
+          {orders.length === 0 ? (
+            <div className="py-20 text-center opacity-30">
                <span className="material-icons-round text-6xl mb-4">task_alt</span>
                <p className="font-black uppercase tracking-widest">Không có đơn hàng cần soạn</p>
             </div>
+          ) : (
+            <>
+              {/* Header */}
+              <div className="hidden lg:flex items-center px-8 py-4 bg-slate-50 border border-slate-100/60 rounded-2xl text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                <div className="w-[18%]">Mã đơn SO</div>
+                <div className="w-[42%]">Khách hàng</div>
+                <div className="w-[15%]">Số mặt hàng</div>
+                <div className="w-[13%]">Ngày đặt</div>
+                <div className="w-[12%] text-right">Thao tác</div>
+              </div>
+
+              {/* Rows */}
+              <div className="space-y-3">
+                {orders.map((order) => (
+                  <div 
+                    key={order.id} 
+                    className="flex flex-col lg:flex-row lg:items-center px-8 py-5 bg-white border border-slate-100/80 rounded-[1.5rem] shadow-sm hover:shadow-md hover:border-primary/25 hover:translate-x-1.5 transition-all duration-300 group"
+                  >
+                    {/* SO Code */}
+                    <div className="w-full lg:w-[18%] mb-3 lg:mb-0 flex items-center justify-between lg:justify-start">
+                      <span className="text-primary font-black text-sm tracking-tight bg-primary/5 px-3 py-1.5 rounded-xl border border-primary/10">
+                        #{order.so_code}
+                      </span>
+                      <span className="lg:hidden text-[10px] bg-blue-50 text-blue-600 px-2.5 py-0.5 rounded-full font-black uppercase tracking-widest border border-blue-100">
+                        MỚI
+                      </span>
+                    </div>
+
+                    {/* Customer */}
+                    <div className="w-full lg:w-[42%] mb-3 lg:mb-0">
+                      <h4 className="font-black text-slate-800 text-[13px] uppercase tracking-tight group-hover:text-primary transition-colors leading-relaxed">
+                        {order.customer_name}
+                      </h4>
+                    </div>
+
+                    {/* Total Items */}
+                    <div className="w-full lg:w-[15%] mb-3 lg:mb-0 flex items-center gap-2 text-slate-600">
+                      <span className="material-icons-round text-slate-400 text-lg">inventory_2</span>
+                      <span className="text-xs font-black uppercase tracking-widest">
+                        <span className="text-primary">{order.total_items}</span> mặt hàng
+                      </span>
+                    </div>
+
+                    {/* Created Date */}
+                    <div className="w-full lg:w-[13%] mb-4 lg:mb-0 text-xs font-bold text-slate-400 flex items-center gap-2">
+                      <span className="material-icons-round text-slate-300 text-lg lg:hidden">calendar_today</span>
+                      {new Date(order.created_at).toLocaleDateString('vi-VN')}
+                    </div>
+
+                    {/* Action Button */}
+                    <div className="w-full lg:w-[12%] text-right">
+                      <button 
+                        onClick={() => handlePickStart(order)}
+                        className="w-full lg:w-auto px-5 py-3 bg-slate-900 text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-primary transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 select-none hover:shadow-lg hover:shadow-primary/20"
+                      >
+                        <span className="material-icons-round text-sm">panning_alt</span>
+                        Soạn hàng
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}

@@ -93,13 +93,13 @@ const InventoryReport: React.FC = () => {
           intransit_qty,
           available_qty,
           trans_date,
-            product!inner (
-              product_long,
-              unit,
-              sn_control,
-              brand,
-              website_id
-            )
+          product:esc_product!inner (
+            product_long,
+            unit,
+            sn_control,
+            brand,
+            website_id
+          )
         `, { count: 'exact' });
 
       // Filter inventory records by website_id and check product visibility array
@@ -212,11 +212,6 @@ const InventoryReport: React.FC = () => {
                 </span>
                 Báo cáo Xuất - Nhập - Tồn
             </h1>
-            {dataSource === 'mock' && (
-                <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-1 rounded border border-amber-200">
-                    Dữ liệu mẫu (Demo)
-                </span>
-            )}
           </div>
         </div>
         <div className="flex items-center gap-3">

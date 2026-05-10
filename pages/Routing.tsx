@@ -27,7 +27,7 @@ const Routing: React.FC = () => {
         .from(TABLE('so'))
         .select('id, so_code, customer_name, delivery_address, status, created_at')
         .contains('website_id', [APP_CONFIG.WEBSITE_ID])
-        .in('status', ['shipped', 'completed']) // Mocking orders ready for dispatch
+        .eq('status', 'shipped')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -41,6 +41,26 @@ const Routing: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching routing orders:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFinishDelivery = async (soCode: string) => {
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from(TABLE('so'))
+        .update({ status: 'completed' })
+        .eq('so_code', soCode);
+
+      if (error) throw error;
+
+      alert(`Đã hoàn tất xác nhận giao hàng cho đơn #${soCode}! Đơn hàng hiện chuyển sang trạng thái "HOÀN TẤT".`);
+      fetchReadyToShip();
+    } catch (err) {
+      console.error('Error completing delivery:', err);
+      alert('Có lỗi xảy ra khi xác nhận giao hàng.');
     } finally {
       setLoading(false);
     }
@@ -89,34 +109,63 @@ const Routing: React.FC = () => {
                          <button className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all">SỬA TUYẾN</button>
                       </div>
                    </div>
-                   <div className="p-6 overflow-x-auto">
-                      <table className="w-full text-left">
-                         <thead>
-                            <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">
-                               <th className="pb-4">Mã đơn SO</th>
-                               <th className="pb-4">Khách hàng</th>
-                               <th className="pb-4">Địa chỉ giao hàng</th>
-                               <th className="pb-4">Thời gian</th>
-                               <th className="pb-4 text-center">Thao tác</th>
-                            </tr>
-                         </thead>
-                         <tbody className="divide-y divide-slate-50">
-                            {routeOrders.map((order) => (
-                              <tr key={order.id} className="group hover:bg-slate-50 transition-all">
-                                 <td className="py-4 font-black text-sm text-primary">{order.so_code}</td>
-                                 <td className="py-4 font-black text-sm text-slate-800">{order.customer_name}</td>
-                                 <td className="py-4 text-[12px] font-bold text-slate-500 max-w-xs truncate">{order.delivery_address || 'N/A'}</td>
-                                 <td className="py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">{order.delivery_time}</td>
-                                 <td className="py-4 text-center">
-                                    <button className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-red-500 transition-all flex items-center justify-center mx-auto">
-                                       <span className="material-icons-round text-lg">delete</span>
-                                    </button>
-                                 </td>
-                              </tr>
-                            ))}
-                         </tbody>
-                      </table>
-                   </div>
+                    <div className="p-6 space-y-4 bg-slate-50/30">
+                      {/* Header */}
+                      <div className="hidden lg:flex items-center px-6 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 bg-white/40 rounded-xl">
+                        <div className="w-[18%]">Mã đơn SO</div>
+                        <div className="w-[30%]">Khách hàng</div>
+                        <div className="w-[32%]">Địa chỉ giao hàng</div>
+                        <div className="w-[12%]">Thời gian</div>
+                        <div className="w-[8%] text-right">Xác nhận</div>
+                      </div>
+
+                      {/* Rows */}
+                      <div className="space-y-2.5">
+                        {routeOrders.map((order) => (
+                          <div 
+                            key={order.id} 
+                            className="flex flex-col lg:flex-row lg:items-center px-6 py-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md hover:border-primary/20 hover:translate-x-1 transition-all duration-300 group"
+                          >
+                            {/* SO Code */}
+                            <div className="w-full lg:w-[18%] mb-2 lg:mb-0">
+                              <span className="text-primary font-black text-sm tracking-tight bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/10">
+                                #{order.so_code}
+                              </span>
+                            </div>
+
+                            {/* Customer */}
+                            <div className="w-full lg:w-[30%] mb-2 lg:mb-0">
+                              <h4 className="font-black text-slate-800 text-[13px] uppercase tracking-tight group-hover:text-primary transition-colors leading-relaxed">
+                                {order.customer_name}
+                              </h4>
+                            </div>
+
+                            {/* Delivery Address */}
+                            <div className="w-full lg:w-[32%] mb-2 lg:mb-0 flex items-center gap-1.5 text-[12px] font-bold text-slate-500">
+                              <span className="material-icons-round text-slate-400 text-base">place</span>
+                              <span className="truncate max-w-xs">{order.delivery_address || 'Chưa cập nhật'}</span>
+                            </div>
+
+                            {/* Delivery Time */}
+                            <div className="w-full lg:w-[12%] mb-3 lg:mb-0 flex items-center gap-1.5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                              <span className="material-icons-round text-slate-300 text-base lg:hidden">schedule</span>
+                              {order.delivery_time}
+                            </div>
+
+                            {/* Action Button */}
+                            <div className="w-full lg:w-[8%] text-right">
+                              <button 
+                                onClick={() => handleFinishDelivery(order.so_code)}
+                                className="w-full lg:w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white hover:scale-105 active:scale-95 transition-all flex items-center justify-center lg:ml-auto shadow-sm"
+                                title="Xác nhận đã giao hàng"
+                              >
+                                <span className="material-icons-round text-lg">check</span>
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                 </div>
               );
            })}
