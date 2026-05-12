@@ -507,8 +507,7 @@ const InboundNew: React.FC<InboundNewProps> = ({ hideHeader }) => {
         po_code: poCode,
         product_code: item.product_code,
         ordered_qty: item.qty,
-        unit: item.unit,
-        website_id: [APP_CONFIG.WEBSITE_ID]
+        unit: item.unit
       }));
       
       const { error: itemError } = await supabase

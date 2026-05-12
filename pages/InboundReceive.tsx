@@ -66,19 +66,18 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
             image
           )
         `)
-        .eq('po_id', poData.id);
+        .eq('po_code', poCode);
 
       if (!itemData || itemData.length === 0) {
         const jsonItems = poData.items || [];
         if (jsonItems.length > 0) {
           const itemsToInsert = jsonItems.map((it: any) => ({
-            po_id: poData.id,
+            po_code: poCode,
             product_code: it.product_code,
             ordered_qty: it.quantity || it.ordered_qty || 1,
             received_qty: it.received_qty || 0,
             unit: it.unit || 'cái',
-            vat_rate: it.vat_rate || 0.1,
-            website_id: [APP_CONFIG.WEBSITE_ID]
+            vat_rate: it.vat_rate || 0.1
           }));
           await supabase.from(TABLE('po_items')).insert(itemsToInsert);
           const { data: refetch } = await supabase
@@ -87,7 +86,7 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
               id, product_code, ordered_qty, received_qty, unit,
               product:product_code (product_long, sn_control, image)
             `)
-            .eq('po_id', poData.id);
+            .eq('po_code', poCode);
           itemData = refetch;
         }
       }
@@ -238,12 +237,11 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
           await supabase.from(TABLE('po_items')).update({ received_qty: qty }).eq('id', item.id);
         } else {
           await supabase.from(TABLE('po_items')).insert({
-            po_id: poInfo.id,
+            po_code: poCode,
             product_code: item.product_code,
             ordered_qty: item.ordered_qty,
             received_qty: qty,
-            unit: item.unit,
-            website_id: [APP_CONFIG.WEBSITE_ID]
+            unit: item.unit
           });
         }
       }
