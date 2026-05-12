@@ -131,15 +131,47 @@ CREATE POLICY "users_select" ON esc_users FOR SELECT
   );
 
 CREATE POLICY "users_insert" ON esc_users FOR INSERT
-  WITH CHECK (app.is_super_admin());
+  WITH CHECK (
+    app.is_super_admin()
+    OR (
+      app.is_admin_or_above()
+      AND website_id && (
+        SELECT website_id 
+        FROM esc_users 
+        WHERE id = app.current_user_id()
+        LIMIT 1
+      )
+    )
+  );
 
 CREATE POLICY "users_update" ON esc_users FOR UPDATE
   USING (
     id = app.current_user_id()   -- tự cập nhật profile
     OR app.is_super_admin()
+    OR (
+      app.is_admin_or_above()
+      AND website_id && (
+        SELECT website_id 
+        FROM esc_users 
+        WHERE id = app.current_user_id()
+        LIMIT 1
+      )
+    )
   );
 
--- Không có DELETE policy → không ai xóa được user từ client
+CREATE POLICY "users_delete" ON esc_users FOR DELETE
+  USING (
+    app.is_super_admin()
+    OR (
+      app.is_admin_or_above()
+      AND website_id && (
+        SELECT website_id 
+        FROM esc_users 
+        WHERE id = app.current_user_id()
+        LIMIT 1
+      )
+    )
+  );
 
 -- esc_staff_profiles: đọc cùng site, ghi chỉ super_admin
 CREATE POLICY "staff_profiles_select" ON esc_staff_profiles FOR SELECT
@@ -150,10 +182,46 @@ CREATE POLICY "staff_profiles_select" ON esc_staff_profiles FOR SELECT
   );
 
 CREATE POLICY "staff_profiles_insert" ON esc_staff_profiles FOR INSERT
-  WITH CHECK (app.is_super_admin());
+  WITH CHECK (
+    app.is_super_admin()
+    OR (
+      app.is_admin_or_above()
+      AND website_id && (
+        SELECT website_id 
+        FROM esc_users 
+        WHERE id = app.current_user_id()
+        LIMIT 1
+      )
+    )
+  );
 
 CREATE POLICY "staff_profiles_update" ON esc_staff_profiles FOR UPDATE
-  USING (app.is_super_admin());
+  USING (
+    app.is_super_admin()
+    OR (
+      app.is_admin_or_above()
+      AND website_id && (
+        SELECT website_id 
+        FROM esc_users 
+        WHERE id = app.current_user_id()
+        LIMIT 1
+      )
+    )
+  );
+
+CREATE POLICY "staff_profiles_delete" ON esc_staff_profiles FOR DELETE
+  USING (
+    app.is_super_admin()
+    OR (
+      app.is_admin_or_above()
+      AND website_id && (
+        SELECT website_id 
+        FROM esc_users 
+        WHERE id = app.current_user_id()
+        LIMIT 1
+      )
+    )
+  );
 
 -- esc_hr_departments: đọc cùng site, ghi super_admin
 CREATE POLICY "hr_dept_select" ON esc_hr_departments FOR SELECT
@@ -615,8 +683,8 @@ GRANT EXECUTE ON FUNCTION app.can_access_website_array(INTEGER[]) TO anon, authe
 GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO anon;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon;
 
--- Riêng các bảng nhạy cảm: hạn chế anon
-REVOKE INSERT, UPDATE ON esc_users FROM anon;
+-- Riêng các bảng nhạy cảm: hạn chế anon (cho phép esc_users thao tác ghi cho admin qua RLS)
+GRANT INSERT, UPDATE, DELETE ON esc_users TO anon;
 REVOKE INSERT, UPDATE ON esc_erp_roles FROM anon;
 REVOKE INSERT, UPDATE ON esc_erp_role_permissions FROM anon;
 REVOKE INSERT, UPDATE ON esc_hr_shifts FROM anon;
