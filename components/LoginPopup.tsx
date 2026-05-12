@@ -12,6 +12,13 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Registration state
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [regFullName, setRegFullName] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -148,68 +155,259 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onLoginSuccess }) => {
     }
   };
 
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!regFullName || !regPhone || !regPassword || !regConfirmPassword) {
+      setError('Vui lòng điền đầy đủ tất cả thông tin bắt buộc.');
+      return;
+    }
+
+    if (regPassword !== regConfirmPassword) {
+      setError('Mật khẩu xác nhận không trùng khớp.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Step 1: Insert into users
+      const { data: userData, error: userError } = await supabase
+        .from(TABLE('users'))
+        .insert([{
+          full_name: regFullName,
+          phone: regPhone,
+          pass: regPassword,
+          user_type: 'staff',
+          website_id: [APP_CONFIG.WEBSITE_ID],
+          is_super_admin: false,
+          is_active: true
+        }])
+        .select()
+        .single();
+
+      if (userError) {
+        if (userError.code === '23505') {
+          throw new Error('Số điện thoại này đã được đăng ký trong hệ thống.');
+        }
+        throw userError;
+      }
+
+      // Step 2: Insert into staff_profiles
+      const { error: profileError } = await supabase
+        .from(TABLE('staff_profiles'))
+        .insert([{
+          user_id: userData.id,
+          website_id: [APP_CONFIG.WEBSITE_ID],
+          position: 'Nhân viên mới đăng ký'
+        }]);
+
+      if (profileError) throw profileError;
+
+      alert('Đăng ký tài khoản thành công! Vui lòng sử dụng tài khoản vừa tạo để đăng nhập.');
+      
+      // Chuyển về màn hình đăng nhập và điền sẵn số điện thoại
+      setPhone(regPhone);
+      setPassword('');
+      setIsRegistering(false);
+      
+      // Clear registration form
+      setRegFullName('');
+      setRegPhone('');
+      setRegPassword('');
+      setRegConfirmPassword('');
+
+    } catch (err: any) {
+      console.error('Registration error:', err);
+      setError(err.message || 'Đã xảy ra lỗi không xác định khi đăng ký.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl shadow-blue-900/20 overflow-hidden transform transition-all animate-in fade-in zoom-in duration-300">
         <div className="p-8">
-          <div className="flex flex-col items-center mb-8">
-            <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-               <img src="/ESC__logo-01.jpg" alt="Logo" className="w-16 h-16 object-cover rounded-xl" />
+          <div className="flex flex-col items-center mb-6">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
+               <img src="/ESC__logo-01.jpg" alt="Logo" className="w-12 h-12 object-cover rounded-xl" />
             </div>
-            <h2 className="text-2xl font-extrabold text-slate-900">Đăng nhập Hệ thống</h2>
-            <p className="text-slate-500 text-sm font-medium mt-1">Kho ESC WMS</p>
+            <h2 className="text-2xl font-extrabold text-slate-900">
+              {isRegistering ? 'Đăng ký Tài khoản' : 'Đăng nhập Hệ thống'}
+            </h2>
+            <p className="text-slate-500 text-sm font-medium mt-1">
+              {isRegistering ? 'Tham gia thành viên Kho ESC WMS' : 'Kho ESC WMS'}
+            </p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Số điện thoại</label>
-              <div className="relative">
-                <span className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">phone</span>
-                <input
-                  type="text"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder-slate-400 font-medium transition-all outline-none"
-                  placeholder="Nhập số điện thoại..."
-                  required
-                />
+          {isRegistering ? (
+            /* REGISTRATION FORM */
+            <form onSubmit={handleRegister} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Họ và tên</label>
+                <div className="relative">
+                  <span className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">person</span>
+                  <input
+                    type="text"
+                    value={regFullName}
+                    onChange={(e) => setRegFullName(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder-slate-400 font-medium transition-all outline-none"
+                    placeholder="Nhập họ và tên đầy đủ..."
+                    required
+                  />
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Mật khẩu</label>
-              <div className="relative">
-                <span className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">lock</span>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder-slate-400 font-medium transition-all outline-none"
-                  placeholder="Nhập mật khẩu..."
-                  required
-                />
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Số điện thoại</label>
+                <div className="relative">
+                  <span className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">phone</span>
+                  <input
+                    type="tel"
+                    value={regPhone}
+                    onChange={(e) => setRegPhone(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder-slate-400 font-medium transition-all outline-none"
+                    placeholder="Nhập số điện thoại đăng ký..."
+                    required
+                  />
+                </div>
               </div>
-            </div>
 
-            {error && (
-              <div className="p-3 bg-rose-50 border border-rose-100 rounded-lg flex items-center gap-2 text-rose-600 text-sm font-bold animate-shake">
-                <span className="material-icons-round text-lg">error_outline</span>
-                {error}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Mật khẩu</label>
+                <div className="relative">
+                  <span className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">lock</span>
+                  <input
+                    type="password"
+                    value={regPassword}
+                    onChange={(e) => setRegPassword(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder-slate-400 font-medium transition-all outline-none"
+                    placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)..."
+                    required
+                  />
+                </div>
               </div>
-            )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary hover:bg-blue-700 disabled:bg-slate-300 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-primary/25 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-              ) : (
-                <>Đăng nhập hệ thống <span className="material-icons-round">login</span></>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Xác nhận mật khẩu</label>
+                <div className="relative">
+                  <span className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">lock</span>
+                  <input
+                    type="password"
+                    value={regConfirmPassword}
+                    onChange={(e) => setRegConfirmPassword(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder-slate-400 font-medium transition-all outline-none"
+                    placeholder="Nhập lại mật khẩu để xác nhận..."
+                    required
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <div className="p-3 bg-rose-50 border border-rose-100 rounded-lg flex items-center gap-2 text-rose-600 text-sm font-bold animate-shake">
+                  <span className="material-icons-round text-lg">error_outline</span>
+                  {error}
+                </div>
               )}
-            </button>
-          </form>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-primary hover:bg-blue-700 disabled:bg-slate-300 text-white py-3 rounded-xl font-bold shadow-lg shadow-primary/25 transition-all active:scale-[0.98] flex items-center justify-center gap-2 mt-2"
+              >
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                ) : (
+                  <>Đăng ký tài khoản <span className="material-icons-round">person_add</span></>
+                )}
+              </button>
+
+              <div className="text-center pt-3 border-t border-slate-100 mt-3">
+                <p className="text-slate-500 text-xs font-semibold">
+                  Đã có tài khoản?{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsRegistering(false);
+                      setError(null);
+                    }}
+                    className="text-primary hover:underline font-extrabold"
+                  >
+                    Đăng nhập ngay
+                  </button>
+                </p>
+              </div>
+            </form>
+          ) : (
+            /* LOGIN FORM */
+            <form onSubmit={handleLogin} className="space-y-5">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Số điện thoại</label>
+                <div className="relative">
+                  <span className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">phone</span>
+                  <input
+                    type="text"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder-slate-400 font-medium transition-all outline-none"
+                    placeholder="Nhập số điện thoại..."
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Mật khẩu</label>
+                <div className="relative">
+                  <span className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">lock</span>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder-slate-400 font-medium transition-all outline-none"
+                    placeholder="Nhập mật khẩu..."
+                    required
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <div className="p-3 bg-rose-50 border border-rose-100 rounded-lg flex items-center gap-2 text-rose-600 text-sm font-bold animate-shake">
+                  <span className="material-icons-round text-lg">error_outline</span>
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-primary hover:bg-blue-700 disabled:bg-slate-300 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-primary/25 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                ) : (
+                  <>Đăng nhập hệ thống <span className="material-icons-round">login</span></>
+                )}
+              </button>
+
+              <div className="text-center pt-3 border-t border-slate-100 mt-3">
+                <p className="text-slate-500 text-xs font-semibold">
+                  Chưa có tài khoản?{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsRegistering(true);
+                      setError(null);
+                    }}
+                    className="text-primary hover:underline font-extrabold"
+                  >
+                    Đăng ký ngay
+                  </button>
+                </p>
+              </div>
+            </form>
+          )}
         </div>
         
         <div className="bg-slate-50 p-4 text-center border-t border-slate-100">

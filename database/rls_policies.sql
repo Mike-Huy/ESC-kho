@@ -142,6 +142,11 @@ CREATE POLICY "users_insert" ON esc_users FOR INSERT
         LIMIT 1
       )
     )
+    OR (
+      -- Self-registration for anonymous users
+      app.current_user_id() IS NULL
+      AND COALESCE(is_super_admin, FALSE) = FALSE
+    )
   );
 
 CREATE POLICY "users_update" ON esc_users FOR UPDATE
@@ -191,6 +196,15 @@ CREATE POLICY "staff_profiles_insert" ON esc_staff_profiles FOR INSERT
         FROM esc_users 
         WHERE id = app.current_user_id()
         LIMIT 1
+      )
+    )
+    OR (
+      -- Self-registration for anonymous users
+      app.current_user_id() IS NULL
+      AND EXISTS (
+        SELECT 1 FROM esc_users u 
+        WHERE u.id = user_id 
+        AND COALESCE(u.is_super_admin, FALSE) = FALSE
       )
     )
   );
