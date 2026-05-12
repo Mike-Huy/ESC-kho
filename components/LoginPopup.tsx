@@ -73,9 +73,11 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onLoginSuccess }) => {
       let roleColor: string | null = null;
       let permSource: 'super_admin' | 'direct' | 'role' | 'cache' = 'cache';
 
-      if (user.is_super_admin === true) {
+      const isSuperAdminUser = user.is_super_admin === true || staffProfile?.is_super_admin === true;
+
+      if (isSuperAdminUser) {
         // Super Admin: toàn quyền, không cần query thêm
-        allowedModules = ['inbound','orders','outbound','inventory','reports','operation','hr','finance','settings'];
+        allowedModules = ['inbound','orders','outbound','inventory','reports','operation','hr','finance','settings','roadmap'];
         roleLabel = 'Super Admin';
         roleName  = 'super_admin';
         roleColor = '#ef4444';
@@ -129,7 +131,7 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onLoginSuccess }) => {
       const userData = {
         ...user,
         staffProfile: staffProfile || null,
-        isSuperAdmin: user.is_super_admin === true,
+        isSuperAdmin: isSuperAdminUser,
         allowedModules: allowedModules,
         roleLabel: roleLabel,
         roleName: roleName,
