@@ -3,6 +3,7 @@ import { Layout, UserData } from './components/Layout';
 import LoginPopup from './components/LoginPopup';
 import ComingSoon from './components/ComingSoon';
 import { PageType } from './types';
+import { supabase } from './supabaseClient';
 import Dashboard from './pages/Dashboard';
 import InventoryReport from './pages/InventoryReport';
 import CostAnalysis from './pages/CostAnalysis';
@@ -58,6 +59,21 @@ const App: React.FC = () => {
     }
     setIsInitialized(true);
   }, []);
+
+  // Sync database RLS session state whenever user or active page changes.
+  // This ensures that even if connection pooling (PgBouncer) recycles the connection,
+  // the current user session context is always refreshed before queries execute.
+  useEffect(() => {
+    if (user && user.id) {
+      supabase.rpc('set_app_user', { uid: user.id })
+        .then(() => {
+          console.log(`[RLS Sync] Successfully refreshed DB session for user ${user.id} on page "${activePage}"`);
+        })
+        .catch(err => {
+          console.error('[RLS Sync] Failed to refresh DB session:', err);
+        });
+    }
+  }, [activePage, user]);
 
   const handleLogout = () => {
     localStorage.removeItem('wms_user');

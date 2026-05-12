@@ -4,7 +4,7 @@ Tệp này chứa các quy định bắt buộc mà AI Assistant (Antigravity) p
 
 ## 1. Cấu hình Hệ thống (System Configuration)
 - **Localhost Port**: Luôn sử dụng port `3001` cho môi trường phát triển (đã cấu hình trong `vite.config.ts`).
-- **Supabase**: Kết nối với dự án `zrjwslcxbfefzjlgctci.supabase.co`. Mọi thay đổi về database phải đồng bộ với schema của dự án này.
+- **Supabase**: Kết nối với dự án `https://jhebreoxwuimlqwvjdok.supabase.co`. Mọi thay đổi về database phải đồng bộ với schema của dự án này.
 - **Vercel**: Khi deploy, phải đảm bảo các biến môi trường (Environment Variables) như `GEMINI_API_KEY` được thiết lập.
 - **Ngôn ngữ**: Khi trao đổi trong Anti Gravity, lúc bạn xử lý, suy luận, .... thì có thể dùng tiếng Anh, nhưng khi thông báo kết quả thực hiện thì phải dùng tiếng Việt
 - **Tên trường dữ liệu**: Các tên gọi các trường trong code phải tuân thủ theo tên đã tạo trong supabase chứ không nên tạo thêm trường tên khác (ví dụ : supabase đã có cột "qty" thì không được tạo thêm cột "quantity" hay các code phải dùng "qty")
