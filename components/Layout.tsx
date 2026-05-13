@@ -49,7 +49,7 @@ const navItems: NavItem[] = [
       { id: 'rpt_inbound', label: 'Báo cáo nhập', icon: 'summarize' },
       { id: 'rpt_proc', label: 'BC xử lý đơn', icon: 'fact_check' },
       { id: 'rpt_outbound', label: 'BC xuất', icon: 'assignment' },
-      { id: 'inventory', label: 'Xuất - Nhập - Tồn', icon: 'account_balance_wallet' },
+      { id: 'inventory_xnt', label: 'Xuất - Nhập - Tồn', icon: 'account_balance_wallet' },
     ]
   },
   { 

@@ -3,7 +3,8 @@ import { Layout, UserData } from './components/Layout';
 import LoginPopup from './components/LoginPopup';
 import ComingSoon from './components/ComingSoon';
 import { PageType } from './types';
-import { supabase } from './supabaseClient';
+import { supabase, TABLE } from './supabaseClient';
+import { APP_CONFIG } from './appConfig';
 import Dashboard from './pages/Dashboard';
 import InventoryReport from './pages/InventoryReport';
 import CostAnalysis from './pages/CostAnalysis';
@@ -55,7 +56,120 @@ const App: React.FC = () => {
     // Check for existing session
     const savedUser = localStorage.getItem('wms_user');
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      const parsedUser = JSON.parse(savedUser) as UserData;
+      setUser(parsedUser);
+
+      // Async background refresh of user session/permissions from database
+      const refreshUserSession = async () => {
+        try {
+          // Báo cho DB biết user_id trước khi query
+          await supabase.rpc('set_app_user', { uid: parsedUser.id });
+
+          // Step 1: Fetch latest user record (to get updated name/status/is_super_admin)
+          const { data: userRecord, error: userError } = await supabase
+            .from(TABLE('users'))
+            .select('id, phone, full_name, nick_name, avatar, user_type, is_active, is_super_admin, website_id')
+            .eq('id', parsedUser.id)
+            .single();
+
+          if (userError || !userRecord) return;
+
+          // Step 2: Fetch latest staff profile
+          const { data: staffProfile } = await supabase
+            .from(TABLE('staff_profiles'))
+            .select('id, user_id, erp_role_id, is_super_admin, allowed_modules, website_id')
+            .eq('user_id', parsedUser.id)
+            .single();
+
+          // Fetch role info if applicable
+          let erp_role: { name: string; label: string; color: string } | null = null;
+          if (staffProfile?.erp_role_id) {
+            const { data: roleData } = await supabase
+              .from(TABLE('erp_roles'))
+              .select('name, label, color')
+              .eq('id', staffProfile.erp_role_id)
+              .single();
+            erp_role = roleData;
+          }
+
+          // Step 3: Determine permissions source
+          let allowedModules: string[] = [];
+          let roleLabel: string | null = null;
+          let roleName:  string | null = null;
+          let roleColor: string | null = null;
+          let permSource: 'super_admin' | 'direct' | 'role' | 'cache' = 'cache';
+
+          const isSuperAdminUser = userRecord.is_super_admin === true || staffProfile?.is_super_admin === true;
+
+          if (isSuperAdminUser) {
+            allowedModules = ['inbound','orders','outbound','inventory','reports','operation','hr','finance','settings','roadmap'];
+            roleLabel = 'Super Admin';
+            roleName  = 'super_admin';
+            roleColor = '#ef4444';
+            permSource = 'super_admin';
+          } else {
+            // Fetch direct permissions
+            const { data: directPerms } = await supabase
+              .from(TABLE('user_permissions'))
+              .select('module, can_read, can_add, can_edit, can_delete')
+              .eq('user_id', parsedUser.id)
+              .contains('website_id', [APP_CONFIG.WEBSITE_ID]);
+
+            if (directPerms && directPerms.length > 0) {
+              allowedModules = directPerms
+                .filter((p: any) => p.can_read === true)
+                .map((p: any) => p.module);
+              roleLabel  = 'Quyền trực tiếp';
+              roleName   = 'custom_permissions';
+              roleColor  = '#ec4899';
+              permSource = 'direct';
+            } else if (staffProfile?.erp_role_id) {
+              const { data: rolePerms } = await supabase
+                .from(TABLE('erp_role_permissions'))
+                .select('module, can_read')
+                .eq('role_id', staffProfile.erp_role_id);
+
+              allowedModules = (rolePerms || [])
+                .filter((p: any) => p.can_read === true)
+                .map((p: any) => p.module);
+              roleLabel  = erp_role?.label || null;
+              roleName   = erp_role?.name  || null;
+              roleColor  = erp_role?.color || null;
+              permSource = 'role';
+            } else {
+              allowedModules = staffProfile?.allowed_modules || [];
+              roleLabel  = erp_role?.label || null;
+              roleName   = erp_role?.name  || null;
+              roleColor  = erp_role?.color || null;
+              permSource = 'cache';
+            }
+          }
+
+          const updatedUserData: UserData = {
+            id: userRecord.id,
+            phone: userRecord.phone,
+            full_name: userRecord.full_name,
+            nick_name: userRecord.nick_name || undefined,
+            avatar: userRecord.avatar || undefined,
+            isSuperAdmin: isSuperAdminUser,
+            allowedModules: allowedModules,
+            roleLabel: roleLabel || undefined,
+            roleName: roleName || undefined,
+            roleColor: roleColor || undefined,
+          };
+
+          // Only update if there is actually a change to avoid infinite renders/flickers
+          if (JSON.stringify(parsedUser) !== JSON.stringify(updatedUserData)) {
+            console.log(`[Session Sync] Updating user permissions in background (${permSource}):`, allowedModules);
+            localStorage.setItem('wms_user', JSON.stringify(updatedUserData));
+            setUser(updatedUserData);
+          }
+        } catch (error) {
+          console.error('[Session Sync] Error background refreshing user session:', error);
+        }
+      };
+
+      refreshUserSession();
     }
     setIsInitialized(true);
   }, []);
@@ -65,13 +179,15 @@ const App: React.FC = () => {
   // the current user session context is always refreshed before queries execute.
   useEffect(() => {
     if (user && user.id) {
-      supabase.rpc('set_app_user', { uid: user.id })
-        .then(() => {
+      const syncSession = async () => {
+        try {
+          await supabase.rpc('set_app_user', { uid: user.id });
           console.log(`[RLS Sync] Successfully refreshed DB session for user ${user.id} on page "${activePage}"`);
-        })
-        .catch(err => {
+        } catch (err) {
           console.error('[RLS Sync] Failed to refresh DB session:', err);
-        });
+        }
+      };
+      syncSession();
     }
   }, [activePage, user]);
 
@@ -129,6 +245,7 @@ const App: React.FC = () => {
       case 'rpt_inbound': return <InboundReport />;
       case 'rpt_proc': return <ProcessReport />;
       case 'rpt_outbound': return <OutboundReport />;
+      case 'inventory_xnt':
       case 'rpt_xnt': return <InventoryReport />;
 
       // Vận hành
