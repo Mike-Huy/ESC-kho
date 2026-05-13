@@ -181,8 +181,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
 
     // Lọc các menu con của nhóm cha
     const filteredChildren = item.children.filter(child => {
-      // Hiện nếu menu con đó được phân quyền cụ thể HOẶC nhóm cha có quyền chung
-      return allowed.includes(child.id) || (parentModule && allowed.includes(parentModule));
+      // Hiện nếu menu con đó được phân quyền cụ thể (không kế thừa tự động từ nhóm cha)
+      return allowed.includes(child.id);
     });
 
     return {
