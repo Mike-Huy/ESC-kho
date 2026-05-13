@@ -63,6 +63,15 @@ const OutboundReport: React.FC = () => {
       .contains('website_id', [APP_CONFIG.WEBSITE_ID])
       .in('status', status ? [status] : ['shipped', 'completed', 'returned']);
 
+    // Filter by warehouse if user is restricted
+    const savedUser = localStorage.getItem('wms_user');
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+      if (user && !user.isSuperAdmin && user.wh_code) {
+        query = query.eq('wh_code', user.wh_code);
+      }
+    }
+
     if (from) query = query.gte('shipped_date', from);
     if (to)   query = query.lte('shipped_date', to);
     if (q)    query = query.or(`so_code.ilike.%${q}%,customer_name.ilike.%${q}%`);
@@ -86,6 +95,14 @@ const OutboundReport: React.FC = () => {
         .select('so_code, order_date, shipped_date, customer_name, carrier, tracking_no, status, total_amount, paid_amount, payment_status', { count: 'exact' })
         .contains('website_id', [APP_CONFIG.WEBSITE_ID])
         .in('status', status ? [status] : ['shipped', 'completed', 'returned']);
+
+      // Filter by warehouse if user is restricted
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        if (user && !user.isSuperAdmin && user.wh_code) {
+          query = query.eq('wh_code', user.wh_code);
+        }
+      }
 
       if (from) query = query.gte('shipped_date', from);
       if (to)   query = query.lte('shipped_date', to);

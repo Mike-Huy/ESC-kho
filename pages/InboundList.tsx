@@ -34,6 +34,15 @@ const InboundList: React.FC<InboundListProps> = ({ onReceive, onNew, hideHeader 
       // Filter by website_id
       query = query.contains('website_id', [APP_CONFIG.WEBSITE_ID]);
 
+      // Filter by warehouse if user is restricted
+      const savedUser = localStorage.getItem('wms_user');
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        if (user && !user.isSuperAdmin && user.wh_code) {
+          query = query.eq('wh_code', user.wh_code);
+        }
+      }
+
       const { data, error } = await query.order('order_date', { ascending: false });
 
       if (error) throw error;

@@ -11,6 +11,7 @@ interface StaffMember {
   position: string | null;
   avatar: string | null;
   status: string;
+  wh_code: string | null;
 }
 
 interface StaffListProps {
@@ -23,6 +24,7 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
   const [error, setError] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [departments, setDepartments] = useState<any[]>([]);
+  const [warehouses, setWarehouses] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingStaffId, setEditingStaffId] = useState<number | null>(null);
   
@@ -30,7 +32,8 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
   const [newStaff, setNewStaff] = useState({
     fullName: '',
     phone: '',
-    deptId: ''
+    deptId: '',
+    whCode: ''
   });
 
   const fetchStaff = async () => {
@@ -39,7 +42,6 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
       setError(null);
 
       // Fetch staff from users joined with staff_profiles and hr_departments
-      // We filter for products belonging to current website_id
       const { data, error } = await supabase
         .from(TABLE('users'))
         .select(`
@@ -50,6 +52,7 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
           avatar,
           staff_profiles:esc_staff_profiles!inner (
             position,
+            wh_code,
             esc_hr_departments (
               name
             )
@@ -75,7 +78,8 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
             avatar: item.avatar,
             department: profile?.esc_hr_departments?.name || '---',
             position: profile?.position || 'Nhân viên',
-            status: 'Hoạt động'
+            status: 'Hoạt động',
+            wh_code: profile?.wh_code || null
           };
         });
         setStaff(formattedData);
@@ -98,9 +102,22 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
     }
   };
 
+  const fetchWarehouses = async () => {
+    const { data, error } = await supabase
+      .from('esc_warehouse')
+      .select('wh_code, wh_name')
+      .eq('is_active', true)
+      .contains('website_id', [APP_CONFIG.WEBSITE_ID])
+      .order('wh_name');
+    if (!error && data) {
+      setWarehouses(data);
+    }
+  };
+
   useEffect(() => {
     fetchStaff();
     fetchDepartments();
+    fetchWarehouses();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -130,7 +147,8 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
         const { error: profileError } = await supabase
           .from(TABLE('staff_profiles'))
           .update({
-            dept_id: parseInt(newStaff.deptId)
+            dept_id: parseInt(newStaff.deptId),
+            wh_code: newStaff.whCode || null
           })
           .eq('user_id', editingStaffId);
 
@@ -160,6 +178,7 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
           .insert([{
             user_id: userData.id,
             dept_id: parseInt(newStaff.deptId),
+            wh_code: newStaff.whCode || null,
             website_id: [APP_CONFIG.WEBSITE_ID],
             position: 'Nhân viên'
           }]);
@@ -169,7 +188,7 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
       }
 
       // Reset and close
-      setNewStaff({ fullName: '', phone: '', deptId: '' });
+      setNewStaff({ fullName: '', phone: '', deptId: '', whCode: '' });
       setEditingStaffId(null);
       setIsAddModalOpen(false);
       fetchStaff();
@@ -211,7 +230,8 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
     setNewStaff({
       fullName: member.full_name,
       phone: member.phone,
-      deptId: dept?.id?.toString() || ''
+      deptId: dept?.id?.toString() || '',
+      whCode: member.wh_code || ''
     });
     setEditingStaffId(member.id);
     setIsAddModalOpen(true);
@@ -275,6 +295,7 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
                   <th className="px-6 py-2">Số điện thoại</th>
                   <th className="px-6 py-2">Phòng ban</th>
                   <th className="px-6 py-2">Chức vụ</th>
+                  <th className="px-6 py-2">Giới hạn Kho</th>
                   <th className="px-6 py-2">Trạng thái</th>
                   <th className="px-6 py-2 text-right">Thao tác</th>
                 </tr>
@@ -310,6 +331,17 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
                     </td>
                     <td className="px-6 py-1.5">
                       <span className="text-sm text-slate-600 font-semibold">{member.position}</span>
+                    </td>
+                    <td className="px-6 py-1.5">
+                      {member.wh_code ? (
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-purple-50 text-purple-700 border border-purple-200 uppercase tracking-tight">
+                          🔑 {member.wh_code}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 font-bold uppercase italic">
+                          Tất cả kho
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-1.5">
                       <div className="flex items-center gap-2">
@@ -417,6 +449,21 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
                       placeholder="09xx.xxx.xxx"
                       required
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2 px-1">Giới hạn Kho hoạt động (Không bắt buộc)</label>
+                    <select 
+                      value={newStaff.whCode}
+                      onChange={(e) => setNewStaff({...newStaff, whCode: e.target.value})}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-primary/20 outline-none font-bold text-slate-700"
+                    >
+                      <option value="">-- Cho phép xem tất cả Kho --</option>
+                      {warehouses.map(wh => (
+                        <option key={wh.wh_code} value={wh.wh_code}>{wh.wh_name} ({wh.wh_code})</option>
+                      ))}
+                    </select>
+                    <p className="text-[9px] text-slate-400 mt-1 font-bold uppercase tracking-wide px-1">Nếu chọn, user này sẽ chỉ nhìn thấy các đơn hàng và lượng tồn kho của riêng kho này.</p>
                   </div>
                </div>
 

@@ -13,6 +13,7 @@ export interface UserData {
   roleLabel?: string;   // label từ esc_erp_roles (ví dụ: 'Trưởng nhóm')
   roleName?: string;    // name từ esc_erp_roles (ví dụ: 'leader')
   roleColor?: string;   // màu hex của role
+  wh_code?: string | null; // mã kho giới hạn (nếu có)
 }
 
 interface LayoutProps {
@@ -398,32 +399,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
           </div>
         </header>
         
-        {/* Floating Action Buttons Area - Right Fixed */}
-        <div className="fixed right-3 sm:right-6 bottom-4 sm:bottom-10 z-[60] flex flex-col gap-2 sm:gap-3">
-          <button
-            onClick={() => setActivePage('scanner')}
-            className="group flex items-center justify-end gap-2 transition-all"
-          >
-            <span className="bg-white px-2 py-1 rounded-md shadow-lg text-[10px] font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity border border-slate-100 hidden sm:block">
-              Quét mã vạch
-            </span>
-            <div className={`w-12 h-12 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shadow-xl transition-all active:scale-90 ${activePage === 'scanner' ? 'bg-primary text-white scale-105 shadow-primary/30' : 'bg-white text-slate-600 hover:text-primary'}`}>
-              <span className="material-icons-round text-xl">qr_code_scanner</span>
-            </div>
-          </button>
 
-          <button
-            onClick={() => setActivePage('staffCheckIn')}
-            className="group flex items-center justify-end gap-2 transition-all"
-          >
-            <span className="bg-white px-2 py-1 rounded-md shadow-lg text-[10px] font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity border border-slate-100 hidden sm:block">
-              Chấm công
-            </span>
-            <div className={`w-12 h-12 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shadow-xl transition-all active:scale-90 ${activePage === 'staffCheckIn' ? 'bg-primary text-white scale-105 shadow-primary/30' : 'bg-white text-slate-600 hover:text-emerald-500'}`}>
-              <span className="material-icons-round text-xl">fingerprint</span>
-            </div>
-          </button>
-        </div>
 
         {/* Page Content */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto custom-scrollbar relative">

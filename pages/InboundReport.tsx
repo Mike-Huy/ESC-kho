@@ -63,6 +63,16 @@ const InboundReport: React.FC = () => {
       .from(TABLE('po'))
       .select('total_amount, paid_amount', { count: 'exact' })
       .contains('website_id', [APP_CONFIG.WEBSITE_ID]);
+
+    // Filter by warehouse if user is restricted
+    const savedUser = localStorage.getItem('wms_user');
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+      if (user && !user.isSuperAdmin && user.wh_code) {
+        query = query.eq('wh_code', user.wh_code);
+      }
+    }
+
     if (from)   query = query.gte('order_date', from);
     if (to)     query = query.lte('order_date', to);
     if (status) query = query.eq('status', status);
@@ -90,6 +100,14 @@ const InboundReport: React.FC = () => {
           po_items:${TABLE('po_items')}(id)
         `, { count: 'exact' })
         .contains('website_id', [APP_CONFIG.WEBSITE_ID]);
+
+      // Filter by warehouse if user is restricted
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        if (user && !user.isSuperAdmin && user.wh_code) {
+          query = query.eq('wh_code', user.wh_code);
+        }
+      }
 
       if (from)   query = query.gte('order_date', from);
       if (to)     query = query.lte('order_date', to);

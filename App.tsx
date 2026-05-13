@@ -77,7 +77,7 @@ const App: React.FC = () => {
           // Step 2: Fetch latest staff profile
           const { data: staffProfile } = await supabase
             .from(TABLE('staff_profiles'))
-            .select('id, user_id, erp_role_id, is_super_admin, allowed_modules, website_id')
+            .select('id, user_id, erp_role_id, is_super_admin, allowed_modules, website_id, wh_code')
             .eq('user_id', parsedUser.id)
             .single();
 
@@ -156,6 +156,7 @@ const App: React.FC = () => {
             roleLabel: roleLabel || undefined,
             roleName: roleName || undefined,
             roleColor: roleColor || undefined,
+            wh_code: staffProfile?.wh_code || null,
           };
 
           // Only update if there is actually a change to avoid infinite renders/flickers

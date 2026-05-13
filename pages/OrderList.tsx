@@ -402,6 +402,15 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail, statusFilter = '', 
         .contains('website_id', [APP_CONFIG.WEBSITE_ID])
         .filter(`${TABLE('so_items')}.${TABLE('product')}.website_id`, 'cs', `{${APP_CONFIG.WEBSITE_ID}}`);
 
+      // Filter by warehouse if user is restricted
+      const savedUser = localStorage.getItem('wms_user');
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        if (user && !user.isSuperAdmin && user.wh_code) {
+          query = query.eq('wh_code', user.wh_code);
+        }
+      }
+
       // Filter by statusFilter
       if (statusFilter === 'pending_proc') {
         query = query.in('status', ['pending', 'new', 'processing']);

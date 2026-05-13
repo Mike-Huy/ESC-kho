@@ -29,6 +29,9 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
   const [activeItemIdx, setActiveItemIdx] = useState<number | null>(null);
 
   const [poInfo, setPoInfo] = useState<any>(null);
+  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [selectedWhCode, setSelectedWhCode] = useState('');
+  const [isRestricted, setIsRestricted] = useState(false);
 
   const getProductImageUrl = (imagePath: string) => {
     if (!imagePath) return "https://zrjwslcxbfefzjlgctci.supabase.co/storage/v1/object/public/product_images/placeholder.png";
@@ -51,6 +54,28 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
         
       if (poError || !poData) throw new Error(poError?.message || 'Không tìm thấy đơn hàng');
       setPoInfo(poData);
+
+      // Fetch active warehouses
+      const { data: whData } = await supabase
+        .from(TABLE('warehouse'))
+        .select('wh_code, wh_name')
+        .eq('is_active', true);
+      const whList = whData || [];
+      setWarehouses(whList);
+
+      // Check current user warehouse restrictions
+      const savedUser = localStorage.getItem('wms_user');
+      let userWhCode = '';
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        if (user && !user.isSuperAdmin && user.wh_code) {
+          userWhCode = user.wh_code;
+          setIsRestricted(true);
+        }
+      }
+
+      // Default selected wh_code
+      setSelectedWhCode(userWhCode || poData?.wh_code || (whList[0]?.wh_code || ''));
 
       let { data: itemData } = await supabase
         .from(TABLE('po_items'))
@@ -279,7 +304,7 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
         ...(poInfo.items.find((orig: any) => orig.product_code === it.product_code) || {})
       }));
 
-      await supabase.from(TABLE('po')).update({ items: updatedJsonItems }).eq('id', poInfo.id);
+      await supabase.from(TABLE('po')).update({ items: updatedJsonItems, wh_code: selectedWhCode }).eq('id', poInfo.id);
       await supabase.from(TABLE('serial_tracking')).delete().eq('po_code', poCode);
       
       const snEntries: any[] = [];
@@ -301,7 +326,7 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
         await supabase.from(TABLE('serial_tracking')).insert(snEntries);
       }
 
-      await supabase.from(TABLE('po')).update({ status: 'received', actual_delivery: new Date().toISOString() }).eq('po_code', poCode);
+      await supabase.from(TABLE('po')).update({ status: 'received', actual_delivery: new Date().toISOString(), wh_code: selectedWhCode }).eq('po_code', poCode);
       onBack();
     } catch (error) {
       console.error('Error receiving goods:', error);
@@ -511,7 +536,18 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Kho đích</label>
                     <div className="flex items-center gap-2">
                        <span className="material-icons-round text-slate-400 text-sm">warehouse</span>
-                       <p className="font-bold text-slate-700 text-xs uppercase">KHO ESC - CHÍNH</p>
+                       <select
+                          value={selectedWhCode}
+                          onChange={(e) => setSelectedWhCode(e.target.value)}
+                          disabled={isRestricted || poInfo?.status === 'received'}
+                          className="pl-2 bg-transparent text-slate-700 font-bold text-xs uppercase outline-none focus:ring-1 focus:ring-primary rounded disabled:opacity-75"
+                        >
+                          {warehouses.map(wh => (
+                            <option key={wh.wh_code} value={wh.wh_code}>
+                              {wh.wh_code}
+                            </option>
+                          ))}
+                        </select>
                     </div>
                  </div>
               </div>

@@ -49,7 +49,7 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onLoginSuccess }) => {
       // Step 4: Fetch staff profile
       const { data: staffProfile, error: profileError } = await supabase
         .from(TABLE('staff_profiles'))
-        .select('id, user_id, erp_role_id, is_super_admin, allowed_modules, website_id')
+        .select('id, user_id, erp_role_id, is_super_admin, allowed_modules, website_id, wh_code')
         .eq('user_id', user.id)
         .single();
 
@@ -143,6 +143,7 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onLoginSuccess }) => {
         roleLabel: roleLabel,
         roleName: roleName,
         roleColor: roleColor,
+        wh_code: staffProfile?.wh_code || null,
       };
 
       localStorage.setItem('wms_user', JSON.stringify(userData));

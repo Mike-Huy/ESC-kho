@@ -54,10 +54,20 @@ const ProcessReport: React.FC = () => {
   const [searchInput, setSearchInput] = useState('');
 
   const fetchStats = useCallback(async (from: string, to: string) => {
-    const { data } = await supabase
+    let query = supabase
       .from(TABLE('so'))
       .select('status')
-      .contains('website_id', [APP_CONFIG.WEBSITE_ID])
+      .contains('website_id', [APP_CONFIG.WEBSITE_ID]);
+
+    const savedUser = localStorage.getItem('wms_user');
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+      if (user && !user.isSuperAdmin && user.wh_code) {
+        query = query.eq('wh_code', user.wh_code);
+      }
+    }
+
+    const { data } = await query
       .in('status', ['new', 'confirmed', 'processing', 'picked', 'packed', 'shipped', 'completed', 'returned', 'cancelled'])
       .gte('order_date', from || '2000-01-01')
       .lte('order_date', to || '2099-12-31');
@@ -84,6 +94,13 @@ const ProcessReport: React.FC = () => {
         .from(TABLE('so'))
         .select('so_code, order_date, customer_name, status, total_amount, shipped_date', { count: 'exact' })
         .contains('website_id', [APP_CONFIG.WEBSITE_ID]);
+
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        if (user && !user.isSuperAdmin && user.wh_code) {
+          query = query.eq('wh_code', user.wh_code);
+        }
+      }
 
       if (from)   query = query.gte('order_date', from);
       if (to)     query = query.lte('order_date', to);
