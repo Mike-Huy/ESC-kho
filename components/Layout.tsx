@@ -14,6 +14,7 @@ export interface UserData {
   roleName?: string;    // name từ esc_erp_roles (ví dụ: 'leader')
   roleColor?: string;   // màu hex của role
   wh_code?: string | null; // mã kho giới hạn (nếu có)
+  dept_id?: number | null; // ID bộ phận (1 cho Kho vận)
 }
 
 interface LayoutProps {
@@ -101,6 +102,9 @@ const navItems: NavItem[] = [
   },
   {
     id: 'roadmap', label: '10. Road Map', icon: 'map',
+  },
+  {
+    id: 'hub_app', label: '11. Hub App', icon: 'hub',
   }
 ];
 
@@ -129,6 +133,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
   const filteredNavItems = navItems.filter(item => {
     if (!user) return false;
 
+    // Nếu thuộc bộ phận Kho vận, chỉ hiển thị Hub App
+    if (user.dept_id === 1) {
+      return item.id === 'hub_app';
+    }
+
     // Super Admin thấy tất cả
     if (user.isSuperAdmin) return true;
 
@@ -144,6 +153,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
       'grp_master':    'inventory_master',
       'grp_settings':  'settings',
       'roadmap':       'roadmap',
+      'hub_app':       null,
     };
 
     const requiredModule = moduleMapping[item.id as string];
@@ -176,6 +186,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, setActiveP
       'grp_master':    'inventory_master',
       'grp_settings':  'settings',
       'roadmap':       'roadmap',
+      'hub_app':       null,
     };
     const parentModule = moduleMapping[item.id as string];
     const allowed = user?.allowedModules || [];

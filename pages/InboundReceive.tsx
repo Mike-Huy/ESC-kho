@@ -60,8 +60,7 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
         .from(TABLE('warehouse'))
         .select('wh_code, wh_name')
         .eq('is_active', true);
-      const whList = whData || [];
-      setWarehouses(whList);
+      let whList = whData || [];
 
       // Check current user warehouse restrictions
       const savedUser = localStorage.getItem('wms_user');
@@ -71,8 +70,10 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
         if (user && !user.isSuperAdmin && user.wh_code) {
           userWhCode = user.wh_code;
           setIsRestricted(true);
+          whList = whList.filter(wh => wh.wh_code === user.wh_code);
         }
       }
+      setWarehouses(whList);
 
       // Default selected wh_code
       setSelectedWhCode(userWhCode || poData?.wh_code || (whList[0]?.wh_code || ''));
@@ -296,15 +297,6 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
         }
       }
 
-      const updatedJsonItems = items.map(it => ({
-        product_code: it.product_code,
-        quantity: it.ordered_qty,
-        received_qty: it.product?.sn_control ? it.scanned_serials.length : it.received_qty,
-        unit: it.unit,
-        ...(poInfo.items.find((orig: any) => orig.product_code === it.product_code) || {})
-      }));
-
-      await supabase.from(TABLE('po')).update({ items: updatedJsonItems, wh_code: selectedWhCode }).eq('id', poInfo.id);
       await supabase.from(TABLE('serial_tracking')).delete().eq('po_code', poCode);
       
       const snEntries: any[] = [];

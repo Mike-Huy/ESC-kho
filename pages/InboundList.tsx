@@ -12,6 +12,7 @@ const InboundList: React.FC<InboundListProps> = ({ onReceive, onNew, hideHeader 
   const [pos, setPos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [warehouseMap, setWarehouseMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchPOs();
@@ -20,6 +21,19 @@ const InboundList: React.FC<InboundListProps> = ({ onReceive, onNew, hideHeader 
   const fetchPOs = async () => {
     try {
       setLoading(true);
+
+      // Fetch warehouse name mapping
+      const { data: whData } = await supabase
+        .from(TABLE('warehouse'))
+        .select('wh_code, wh_name');
+      const whMap: Record<string, string> = {};
+      if (whData) {
+        whData.forEach(wh => {
+          whMap[wh.wh_code] = wh.wh_name;
+        });
+      }
+      setWarehouseMap(whMap);
+
       let query = supabase
         .from(TABLE('po'))
         .select(`
@@ -28,7 +42,8 @@ const InboundList: React.FC<InboundListProps> = ({ onReceive, onNew, hideHeader 
           supplier_name,
           order_date,
           status,
-          total_amount
+          total_amount,
+          wh_code
         `);
 
       // Filter by website_id
@@ -54,10 +69,14 @@ const InboundList: React.FC<InboundListProps> = ({ onReceive, onNew, hideHeader 
     }
   };
 
-  const filteredPos = pos.filter(po => 
-    po.po_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    po.supplier_name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredPos = pos.filter(po => {
+    const whName = warehouseMap[po.wh_code] || po.wh_code || '';
+    return (
+      po.po_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      po.supplier_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      whName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
 
   const getStatusStyle = (status: string) => {
     switch (status) {
@@ -119,6 +138,7 @@ const InboundList: React.FC<InboundListProps> = ({ onReceive, onNew, hideHeader 
               <tr className="bg-slate-50/50">
                 <th className="px-8 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mã Đơn Nhập</th>
                 <th className="px-8 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nhà Cung Cấp</th>
+                <th className="px-8 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Kho</th>
                 <th className="px-8 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ngày Đặt</th>
                 <th className="px-8 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Giá Trị</th>
                 <th className="px-8 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Trạng Thái</th>
@@ -128,13 +148,13 @@ const InboundList: React.FC<InboundListProps> = ({ onReceive, onNew, hideHeader 
             <tbody className="divide-y divide-slate-50">
               {loading ? (
                 <tr>
-                   <td colSpan={6} className="py-20 text-center">
+                   <td colSpan={7} className="py-20 text-center">
                       <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto"></div>
                    </td>
                 </tr>
               ) : filteredPos.length === 0 ? (
                 <tr>
-                   <td colSpan={6} className="py-20 text-center text-slate-400 font-bold">Không tìm thấy đơn hàng nào.</td>
+                   <td colSpan={7} className="py-20 text-center text-slate-400 font-bold">Không tìm thấy đơn hàng nào.</td>
                 </tr>
               ) : (
                 filteredPos.map((po) => (
@@ -151,6 +171,11 @@ const InboundList: React.FC<InboundListProps> = ({ onReceive, onNew, hideHeader 
                        <div className="font-bold text-slate-800 uppercase tracking-tighter truncate py-0.5" title={po.supplier_name}>{po.supplier_name}</div>
                     </td>
                     <td className="px-8 py-0.5">
+                       <div className="font-black text-xs text-amber-600 bg-amber-50/80 border border-amber-100 px-2.5 py-1 rounded-lg inline-block uppercase tracking-wide">
+                         {warehouseMap[po.wh_code] || po.wh_code || '---'}
+                       </div>
+                    </td>
+                    <td className="px-8 py-0.5">
                        <div className="text-sm font-bold text-slate-600">{new Date(po.order_date).toLocaleDateString('vi-VN')}</div>
                     </td>
                     <td className="px-8 py-0.5">
@@ -164,7 +189,7 @@ const InboundList: React.FC<InboundListProps> = ({ onReceive, onNew, hideHeader 
                        </span>
                     </td>
                     <td className="px-8 py-0.5 text-right">
-                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all py-0.5">
+                       <div className="flex items-center justify-end gap-2 transition-all py-0.5">
                           {(po.status === 'pending' || po.status === 'draft') && (
                             <button 
                               onClick={() => onReceive(po.po_code)}

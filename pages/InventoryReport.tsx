@@ -64,6 +64,12 @@ const InventoryReport: React.FC = () => {
   const [serialNumbers, setSerialNumbers] = useState<any[]>([]);
   const [snLoading, setSNLoading] = useState(false);
 
+  // Dynamic filter states
+  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [selectedWhCode, setSelectedWhCode] = useState<string>('');
+  const [isRestricted, setIsRestricted] = useState(false);
+  const [searchSKU, setSearchSKU] = useState('');
+
   const formatValue = (value: any) => {
     if (value === null || value === undefined) return "N/A";
     return value;
@@ -73,6 +79,43 @@ const InventoryReport: React.FC = () => {
     if (value === null || value === undefined) return "N/A";
     return Number(value).toLocaleString();
   };
+
+  useEffect(() => {
+    const initFilters = async () => {
+      try {
+        const savedUser = localStorage.getItem('wms_user');
+        let rWh = '';
+        let restricted = false;
+        if (savedUser) {
+          const user = JSON.parse(savedUser);
+          if (user && !user.isSuperAdmin && user.wh_code) {
+            rWh = user.wh_code;
+            restricted = true;
+            setIsRestricted(true);
+            setSelectedWhCode(user.wh_code);
+          }
+        }
+
+        let query = supabase
+          .from(TABLE('warehouse'))
+          .select('wh_code, wh_name')
+          .contains('website_id', [APP_CONFIG.WEBSITE_ID])
+          .eq('is_active', true);
+
+        if (restricted && rWh) {
+          query = query.eq('wh_code', rWh);
+        }
+
+        const { data, error } = await query;
+        if (!error && data) {
+          setWarehouses(data);
+        }
+      } catch (err) {
+        console.error('Error initializing filters:', err);
+      }
+    };
+    initFilters();
+  }, []);
 
   const fetchData = async (page: number) => {
     try {
@@ -107,13 +150,23 @@ const InventoryReport: React.FC = () => {
         .contains('website_id', [APP_CONFIG.WEBSITE_ID])
         .filter('product.website_id', 'cs', `{${APP_CONFIG.WEBSITE_ID}}`);
 
-      // Filter by warehouse if user is restricted
+      // Filter by warehouse if user is restricted or selected a warehouse
       const savedUser = localStorage.getItem('wms_user');
+      let finalWhCode = selectedWhCode;
       if (savedUser) {
         const user = JSON.parse(savedUser);
         if (user && !user.isSuperAdmin && user.wh_code) {
-          query = query.eq('wh_code', user.wh_code);
+          finalWhCode = user.wh_code;
         }
+      }
+
+      if (finalWhCode) {
+        query = query.eq('wh_code', finalWhCode);
+      }
+
+      // Filter by SKU or product name search
+      if (searchSKU) {
+        query = query.or(`product_code.ilike.%${searchSKU}%,product.product_long.ilike.%${searchSKU}%`);
       }
 
       const { data, error, count } = await query
@@ -255,17 +308,34 @@ const InventoryReport: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 material-icons-round text-slate-400 text-sm">search</span>
-              <input className="w-full pl-10 pr-4 py-1.5 bg-white border border-border-light rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary" placeholder="Tìm SKU, tên sản phẩm..." type="text" />
+              <input 
+                className="w-full pl-10 pr-4 py-1.5 bg-white border border-border-light rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary" 
+                placeholder="Tìm SKU, tên sản phẩm..." 
+                type="text" 
+                value={searchSKU}
+                onChange={(e) => setSearchSKU(e.target.value)}
+              />
             </div>
             <div className="relative">
-              <select className="w-full pl-3 pr-10 py-1.5 bg-white border border-border-light rounded-lg text-sm text-slate-700 outline-none focus:ring-1 focus:ring-primary appearance-none font-medium">
-                <option>Tất cả kho</option>
-                <option>Kho A - ESC</option>
-                <option>Kho B - Bình Dương</option>
+              <select 
+                value={selectedWhCode}
+                onChange={(e) => setSelectedWhCode(e.target.value)}
+                disabled={isRestricted}
+                className="w-full pl-3 pr-10 py-1.5 bg-white border border-border-light rounded-lg text-sm text-slate-700 outline-none focus:ring-1 focus:ring-primary appearance-none font-medium disabled:opacity-75"
+              >
+                {!isRestricted && <option value="">Tất cả kho</option>}
+                {warehouses.map(wh => (
+                  <option key={wh.wh_code} value={wh.wh_code}>{wh.wh_name} ({wh.wh_code})</option>
+                ))}
               </select>
               <span className="absolute right-3 top-1/2 -translate-y-1/2 material-icons-round text-slate-400 pointer-events-none">expand_more</span>
             </div>
-            <button className="px-4 py-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-lg text-sm font-bold transition-all border border-primary/20">Áp dụng bộ lọc</button>
+            <button 
+              onClick={() => { setCurrentPage(1); fetchData(1); }}
+              className="px-4 py-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-lg text-sm font-bold transition-all border border-primary/20"
+            >
+              Áp dụng bộ lọc
+            </button>
           </div>
         </div>
         <div className="xl:col-span-4 grid grid-cols-2 gap-4">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import InboundNew from './InboundNew';
 import InboundList from './InboundList';
 import InboundReturn from './InboundReturn';
@@ -9,12 +9,17 @@ interface InboundManagerProps {
   initialTab?: 'inbound_new' | 'inbound_list' | 'inbound_return' | 'inbound_internal';
 }
 
-const InboundManager: React.FC<InboundManagerProps> = ({ onReceive, initialTab = 'inbound_new' }) => {
+const InboundManager: React.FC<InboundManagerProps> = ({ onReceive, initialTab = 'inbound_list' }) => {
   const [activeTab, setActiveTab] = useState<'inbound_new' | 'inbound_list' | 'inbound_return' | 'inbound_internal'>(initialTab);
 
+  // Keep activeTab in sync with initialTab prop when routes change
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
+
   const tabs = [
-    { id: 'inbound_new', label: 'Tạo hàng mới', icon: 'add_shopping_cart' },
     { id: 'inbound_list', label: 'Danh sách đơn', icon: 'list_alt' },
+    { id: 'inbound_new', label: 'Tạo hàng mới', icon: 'add_shopping_cart' },
     { id: 'inbound_return', label: 'Hàng trả', icon: 'settings_backup_restore' },
     { id: 'inbound_internal', label: 'Xử lý nội bộ', icon: 'sync_alt' },
   ] as const;

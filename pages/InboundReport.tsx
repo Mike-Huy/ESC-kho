@@ -102,6 +102,7 @@ const InboundReport: React.FC = () => {
         .contains('website_id', [APP_CONFIG.WEBSITE_ID]);
 
       // Filter by warehouse if user is restricted
+      const savedUser = localStorage.getItem('wms_user');
       if (savedUser) {
         const user = JSON.parse(savedUser);
         if (user && !user.isSuperAdmin && user.wh_code) {

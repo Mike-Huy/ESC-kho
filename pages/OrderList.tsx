@@ -60,6 +60,315 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail, statusFilter = '', 
   const [groupedImportSOs, setGroupedImportSOs] = useState<any[]>([]);
   const [showImportModal, setShowImportModal] = useState(false);
 
+  // Manual Create Order Modal states
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [dbProducts, setDbProducts] = useState<any[]>([]);
+  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [newSOWarehouse, setNewSOWarehouse] = useState('');
+  const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
+  const [newSOCode, setNewSOCode] = useState('');
+  const [newCustName, setNewCustName] = useState('');
+  const [newCustPhone, setNewCustPhone] = useState('');
+  const [newDelivAddr, setNewDelivAddr] = useState('');
+  const [newSODate, setNewSODate] = useState(new Date().toISOString().split('T')[0]);
+  const [newSOItems, setNewSOItems] = useState<{ product_code: string; name: string; qty: number; unit: string; unit_price: number }[]>([]);
+
+  const handleOpenCreateModal = async () => {
+    try {
+      setLoading(true);
+      // Fetch products to populate item dropdown
+      const { data: pData, error: pError } = await supabase
+        .from(TABLE('product'))
+        .select('product_code, product_long, unit, sell_price')
+        .contains('website_id', [APP_CONFIG.WEBSITE_ID])
+        .order('product_long', { ascending: true });
+
+      if (pError) throw pError;
+      setDbProducts(pData || []);
+
+      // Fetch warehouses
+      const { data: whData, error: whError } = await supabase
+        .from(TABLE('warehouse'))
+        .select('wh_code, wh_name')
+        .order('wh_name', { ascending: true });
+
+      if (whError) throw whError;
+      setWarehouses(whData || []);
+
+      // Auto generate a premium code
+      const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const randomPart = Math.floor(1000 + Math.random() * 9000);
+      setNewSOCode(`SO-${datePart}-${randomPart}`);
+      
+      setNewCustName('');
+      setNewCustPhone('');
+      setNewDelivAddr('');
+      setNewSODate(new Date().toISOString().split('T')[0]);
+      setNewSOItems([{ product_code: '', name: '', qty: 1, unit: 'Cái', unit_price: 0 }]);
+      setFilteredProducts([]);
+      setNewSOWarehouse('');
+
+      // Pre-select restricted user warehouse if applicable
+      const savedUser = localStorage.getItem('wms_user');
+      if (savedUser) {
+        const parsedUser = JSON.parse(savedUser);
+        if (parsedUser && parsedUser.wh_code) {
+          setNewSOWarehouse(parsedUser.wh_code);
+          await handleWarehouseChange(parsedUser.wh_code);
+        }
+      }
+
+      setShowCreateModal(true);
+    } catch (err: any) {
+      console.error('Error loading products for SO creation:', err);
+      alert(`Lỗi khi tải dữ liệu khởi tạo: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleWarehouseChange = async (whCode: string) => {
+    setNewSOWarehouse(whCode);
+    if (!whCode) {
+      setFilteredProducts([]);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      // Fetch all products
+      const { data: products, error: pErr } = await supabase
+        .from(TABLE('product'))
+        .select('product_code, product_long, unit, sell_price')
+        .contains('website_id', [APP_CONFIG.WEBSITE_ID]);
+
+      if (pErr) throw pErr;
+
+      // Fetch received PO items
+      const { data: poRecItems, error: poErr } = await supabase
+        .from(TABLE('po_items'))
+        .select(`
+          product_code,
+          received_qty,
+          po:po_code ( status, wh_code )
+        `);
+
+      if (poErr) throw poErr;
+
+      // Fetch SO items
+      const { data: soShipItems, error: soErr } = await supabase
+        .from(TABLE('so_items'))
+        .select(`
+          product_code,
+          qty,
+          so:so_code ( status, wh_code )
+        `);
+
+      if (soErr) throw soErr;
+
+      // Aggregate stock level
+      const productMap = new Map<string, any>();
+      products?.forEach((p: any) => {
+        productMap.set(p.product_code, {
+          product_code: p.product_code,
+          product_long: p.product_long,
+          unit: p.unit || 'Cái',
+          sell_price: p.sell_price || 0,
+          inbound_qty: 0,
+          outbound_qty: 0,
+          stock_qty: 0
+        });
+      });
+
+      poRecItems?.forEach((item: any) => {
+        if (item.po?.status === 'received' && item.po?.wh_code === whCode) {
+          const prod = productMap.get(item.product_code);
+          if (prod) {
+            prod.inbound_qty += Number(item.received_qty) || 0;
+          }
+        }
+      });
+
+      soShipItems?.forEach((item: any) => {
+        const soStatus = item.so?.status;
+        if ((soStatus === 'shipped' || soStatus === 'delivered' || soStatus === 'processing') && item.so?.wh_code === whCode) {
+          const prod = productMap.get(item.product_code);
+          if (prod) {
+            prod.outbound_qty += Number(item.qty) || 0;
+          }
+        }
+      });
+
+      const matchedList = Array.from(productMap.values())
+        .map(prod => ({
+          ...prod,
+          stock_qty: Math.max(0, prod.inbound_qty - prod.outbound_qty)
+        }))
+        .filter(prod => prod.stock_qty > 0);
+
+      setFilteredProducts(matchedList);
+      setNewSOItems([{ product_code: '', name: '', qty: 1, unit: 'Cái', unit_price: 0 }]);
+    } catch (err: any) {
+      console.error('Error calculating stock for warehouse:', err);
+      alert(`Lỗi khi tính toán tồn kho: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddSOItemRow = () => {
+    if (!newSOWarehouse) {
+      alert('Vui lòng chọn Kho hàng trước khi thêm sản phẩm!');
+      return;
+    }
+    setNewSOItems([...newSOItems, { product_code: '', name: '', qty: 1, unit: 'Cái', unit_price: 0 }]);
+  };
+
+  const handleRemoveSOItemRow = (index: number) => {
+    const updated = [...newSOItems];
+    updated.splice(index, 1);
+    setNewSOItems(updated);
+  };
+
+  const handleSOItemProductChange = (index: number, code: string) => {
+    const matched = filteredProducts.find(p => p.product_code === code);
+    const updated = [...newSOItems];
+    if (matched) {
+      updated[index] = {
+        product_code: matched.product_code,
+        name: matched.product_long,
+        qty: Math.min(updated[index].qty, matched.stock_qty),
+        unit: matched.unit || 'Cái',
+        unit_price: matched.sell_price || 0
+      };
+    } else {
+      updated[index] = {
+        product_code: '',
+        name: '',
+        qty: updated[index].qty,
+        unit: 'Cái',
+        unit_price: 0
+      };
+    }
+    setNewSOItems(updated);
+  };
+
+  const handleSOItemChange = (index: number, field: 'qty' | 'unit_price', val: number) => {
+    const updated = [...newSOItems];
+    if (field === 'qty') {
+      const code = updated[index].product_code;
+      const matched = filteredProducts.find(p => p.product_code === code);
+      if (matched && val > matched.stock_qty) {
+        alert(`Số lượng nhập (${val}) vượt quá tồn kho khả dụng (${matched.stock_qty})!`);
+        val = matched.stock_qty;
+      }
+    }
+    updated[index] = {
+      ...updated[index],
+      [field]: val
+    };
+    setNewSOItems(updated);
+  };
+
+  const handleSaveNewSO = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSOCode.trim()) {
+      alert('Vui lòng nhập Mã đơn SO!');
+      return;
+    }
+    if (!newSOWarehouse) {
+      alert('Vui lòng chọn Kho hàng!');
+      return;
+    }
+    if (!newCustName.trim()) {
+      alert('Vui lòng nhập Tên khách hàng!');
+      return;
+    }
+    if (newSOItems.length === 0 || !newSOItems[0].product_code) {
+      alert('Vui lòng thêm ít nhất một sản phẩm vào đơn hàng!');
+      return;
+    }
+    
+    // Validate all items
+    for (const item of newSOItems) {
+      if (!item.product_code) {
+        alert('Vui lòng chọn sản phẩm cho tất cả các dòng!');
+        return;
+      }
+      if (item.qty <= 0) {
+        alert('Số lượng sản phẩm phải lớn hơn 0!');
+        return;
+      }
+    }
+
+    try {
+      setLoading(true);
+      
+      // 1. Check if SO code already exists
+      const { data: existing } = await supabase
+        .from(TABLE('so'))
+        .select('so_code')
+        .eq('so_code', newSOCode.trim());
+      
+      if (existing && existing.length > 0) {
+        alert(`Mã đơn SO "${newSOCode.trim()}" đã tồn tại trong hệ thống! Vui lòng chọn mã khác.`);
+        setLoading(false);
+        return;
+      }
+
+      // 2. Calculate subtotal and total
+      let subtotal = 0;
+      newSOItems.forEach(item => {
+        subtotal += item.qty * item.unit_price;
+      });
+      const total_amount = subtotal;
+
+      // 3. Insert into 'so'
+      const { error: soError } = await supabase
+        .from(TABLE('so'))
+        .insert([{
+          so_code: newSOCode.trim(),
+          customer_name: newCustName.trim(),
+          customer_phone: newCustPhone.trim(),
+          delivery_address: newDelivAddr.trim(),
+          status: 'pending',
+          order_date: newSODate,
+          wh_code: newSOWarehouse,
+          subtotal,
+          total_amount,
+          website_id: [APP_CONFIG.WEBSITE_ID]
+        }]);
+
+      if (soError) throw soError;
+
+      // 4. Insert into 'so_items'
+      const soItemsData = newSOItems.map(item => ({
+        so_code: newSOCode.trim(),
+        product_code: item.product_code,
+        qty: item.qty,
+        unit: item.unit || 'Cái',
+        unit_price: item.unit_price,
+        total_price: item.qty * item.unit_price
+      }));
+
+      const { error: itemsError } = await supabase
+        .from(TABLE('so_items'))
+        .insert(soItemsData);
+
+      if (itemsError) throw itemsError;
+
+      showToastMsg(`Đã tạo đơn SO ${newSOCode.trim()} thành công!`, 'success');
+      setShowCreateModal(false);
+      // Refresh order list
+      fetchOrders();
+    } catch (err: any) {
+      console.error('Error creating new SO:', err);
+      alert(`Lỗi khi tạo đơn hàng SO: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const parseExcelDate = (val: any): string | undefined => {
     if (!val) return undefined;
     if (val instanceof Date) {
@@ -586,7 +895,10 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail, statusFilter = '', 
               <span>Excel Import</span>
             </button>
             
-            <button className="bg-primary hover:bg-blue-700 text-white px-8 py-3 rounded-2xl flex items-center justify-center gap-2 font-black transition-all shadow-xl shadow-primary/20 active:scale-95 uppercase text-xs tracking-widest">
+            <button 
+              onClick={handleOpenCreateModal}
+              className="bg-primary hover:bg-blue-700 text-white px-8 py-3 rounded-2xl flex items-center justify-center gap-2 font-black transition-all shadow-xl shadow-primary/20 active:scale-95 uppercase text-xs tracking-widest"
+            >
               <span className="material-icons-round text-sm">add_circle</span>
               <span>Tạo đơn SO mới</span>
             </button>
@@ -614,7 +926,10 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail, statusFilter = '', 
             <span>Excel Import</span>
           </button>
           
-          <button className="bg-primary hover:bg-blue-700 text-white px-6 py-2 rounded-2xl flex items-center justify-center gap-2 font-black transition-all shadow-xl shadow-primary/20 active:scale-95 uppercase text-xs tracking-widest">
+          <button 
+            onClick={handleOpenCreateModal}
+            className="bg-primary hover:bg-blue-700 text-white px-6 py-2 rounded-2xl flex items-center justify-center gap-2 font-black transition-all shadow-xl shadow-primary/20 active:scale-95 uppercase text-xs tracking-widest"
+          >
             <span className="material-icons-round text-sm">add_circle</span>
             <span>Tạo đơn SO mới</span>
           </button>
@@ -922,6 +1237,257 @@ const OrderList: React.FC<OrderListProps> = ({ onViewDetail, statusFilter = '', 
         accept=".xlsx,.xls,.csv" 
         className="hidden" 
       />
+
+      {/* Premium Create Manual SO Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-4xl bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden transform transition-all animate-in fade-in zoom-in duration-300 flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="p-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 text-primary border border-blue-100 flex items-center justify-center shadow-sm">
+                  <span className="material-icons-round text-2xl">add_circle</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-950 uppercase tracking-tight">Tạo đơn hàng SO mới</h3>
+                  <p className="text-slate-500 text-xs font-bold uppercase tracking-widest text-[9px] mt-0.5">Khởi tạo thông tin đơn hàng và sản phẩm bán thủ công</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowCreateModal(false)}
+                className="w-10 h-10 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-all active:scale-95 border border-transparent hover:border-slate-300 shadow-sm"
+              >
+                <span className="material-icons-round text-lg">close</span>
+              </button>
+            </div>
+
+            {/* Modal Body / Form */}
+            <form onSubmit={handleSaveNewSO} className="flex-1 overflow-y-auto p-8 space-y-8 bg-slate-50/50">
+              {/* Part 1: Client Info */}
+              <div className="bg-white rounded-[2rem] border border-slate-150 p-6 shadow-sm space-y-6">
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.15em] border-b border-slate-100 pb-3 flex items-center gap-2">
+                  <span className="material-icons-round text-base text-primary">person</span>
+                  Thông tin khách hàng & Đơn hàng
+                </h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Chọn Kho hàng <span className="text-rose-500">*</span></label>
+                    <select
+                      value={newSOWarehouse}
+                      onChange={(e) => handleWarehouseChange(e.target.value)}
+                      className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 outline-none focus:bg-white focus:border-primary transition-all text-sm font-bold text-slate-700"
+                      required
+                    >
+                      <option value="">-- Chọn Kho xuất hàng --</option>
+                      {warehouses.map(w => (
+                        <option key={w.wh_code} value={w.wh_code}>
+                          {w.wh_name} ({w.wh_code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Mã đơn SO <span className="text-rose-500">*</span></label>
+                    <input 
+                      type="text"
+                      value={newSOCode}
+                      onChange={(e) => setNewSOCode(e.target.value)}
+                      placeholder="Ví dụ: SO-20260513-1001"
+                      className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 outline-none focus:bg-white focus:border-primary transition-all text-sm font-bold"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Ngày đặt hàng <span className="text-rose-500">*</span></label>
+                    <input 
+                      type="date"
+                      value={newSODate}
+                      onChange={(e) => setNewSODate(e.target.value)}
+                      className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 outline-none focus:bg-white focus:border-primary transition-all text-sm font-bold"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 md:col-span-3">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Tên khách hàng <span className="text-rose-500">*</span></label>
+                    <input 
+                      type="text"
+                      value={newCustName}
+                      onChange={(e) => setNewCustName(e.target.value)}
+                      placeholder="Nhập tên khách hàng..."
+                      className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 outline-none focus:bg-white focus:border-primary transition-all text-sm font-bold"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 md:col-span-1">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Số điện thoại</label>
+                    <input 
+                      type="text"
+                      value={newCustPhone}
+                      onChange={(e) => setNewCustPhone(e.target.value)}
+                      placeholder="Nhập số điện thoại khách hàng..."
+                      className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 outline-none focus:bg-white focus:border-primary transition-all text-sm font-bold"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 md:col-span-2">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Địa chỉ giao hàng</label>
+                    <input 
+                      type="text"
+                      value={newDelivAddr}
+                      onChange={(e) => setNewDelivAddr(e.target.value)}
+                      placeholder="Nhập địa chỉ giao hàng..."
+                      className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 outline-none focus:bg-white focus:border-primary transition-all text-sm font-bold"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Part 2: Product List details */}
+              <div className="bg-white rounded-[2rem] border border-slate-150 p-6 shadow-sm space-y-6">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.15em] flex items-center gap-2">
+                    <span className="material-icons-round text-base text-primary">shopping_basket</span>
+                    Danh sách sản phẩm trong đơn
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={handleAddSOItemRow}
+                    className="bg-blue-50 text-primary border border-blue-100 hover:bg-primary hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-black flex items-center gap-1 transition-all uppercase tracking-wider"
+                  >
+                    <span className="material-icons-round text-sm">add</span>
+                    Thêm sản phẩm
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {newSOItems.map((item, index) => (
+                    <div key={index} className="flex flex-col md:flex-row items-end gap-4 p-4 bg-slate-50/50 rounded-2xl border border-slate-100 relative group/row">
+                      <div className="flex-1 space-y-1.5 w-full">
+                        <label className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Chọn sản phẩm <span className="text-rose-500">*</span></label>
+                        <select
+                          value={item.product_code}
+                          onChange={(e) => handleSOItemProductChange(index, e.target.value)}
+                          className="w-full bg-white border-2 border-slate-150 rounded-xl px-4 py-2.5 outline-none focus:border-primary transition-all text-sm font-bold"
+                          disabled={!newSOWarehouse}
+                          required
+                        >
+                          <option value="">{newSOWarehouse ? '-- Chọn sản phẩm --' : '-- Vui lòng chọn kho trước --'}</option>
+                          {filteredProducts.map(p => (
+                            <option key={p.product_code} value={p.product_code}>
+                              {p.product_long} ({p.product_code}) - [Tồn: {p.stock_qty} {p.unit}]
+                            </option>
+                          ))}
+                        </select>
+                        {item.product_code && (
+                          <div className="text-[10px] text-emerald-600 font-bold mt-1 flex items-center gap-0.5">
+                            <span className="material-icons-round text-xs">done</span>
+                            <span>Còn tồn khả dụng: {filteredProducts.find(p => p.product_code === item.product_code)?.stock_qty || 0} {item.unit}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="w-full md:w-24 space-y-1.5">
+                        <label className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Số lượng <span className="text-rose-500">*</span></label>
+                        <input
+                          type="number"
+                          min="1"
+                          max={filteredProducts.find(p => p.product_code === item.product_code)?.stock_qty || undefined}
+                          value={item.qty}
+                          disabled={!item.product_code}
+                          onChange={(e) => handleSOItemChange(index, 'qty', parseInt(e.target.value, 10) || 1)}
+                          className="w-full bg-white border-2 border-slate-150 rounded-xl px-4 py-2.5 outline-none focus:border-primary transition-all text-sm font-black text-center disabled:bg-slate-50 disabled:text-slate-400"
+                          required
+                        />
+                      </div>
+
+                      <div className="w-full md:w-24 space-y-1.5">
+                        <label className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Đơn vị</label>
+                        <input
+                          type="text"
+                          value={item.unit}
+                          disabled
+                          className="w-full bg-slate-100 border-2 border-transparent rounded-xl px-4 py-2.5 text-slate-500 text-sm font-bold text-center"
+                        />
+                      </div>
+
+                      <div className="w-full md:w-36 space-y-1.5">
+                        <label className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Đơn giá bán (₫) <span className="text-rose-500">*</span></label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={item.unit_price}
+                          disabled={!item.product_code}
+                          onChange={(e) => handleSOItemChange(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                          className="w-full bg-white border-2 border-slate-150 rounded-xl px-4 py-2.5 outline-none focus:border-primary transition-all text-sm font-bold text-right disabled:bg-slate-50 disabled:text-slate-400"
+                          required
+                        />
+                      </div>
+
+                      <div className="w-full md:w-36 space-y-1.5">
+                        <label className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Thành tiền (₫)</label>
+                        <div className="w-full bg-slate-100 border-2 border-transparent rounded-xl px-4 py-2.5 text-slate-600 text-sm font-black text-right">
+                          {new Intl.NumberFormat('vi-VN').format(item.qty * item.unit_price)}
+                        </div>
+                      </div>
+
+                      {newSOItems.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSOItemRow(index)}
+                          className="p-2.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-500 rounded-xl transition-all shadow-sm active:scale-95"
+                          title="Xóa dòng"
+                        >
+                          <span className="material-icons-round text-base">delete</span>
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Totals Summary */}
+                <div className="pt-6 border-t border-slate-100 flex flex-col items-end space-y-2">
+                  <div className="flex items-center gap-4 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                    <span>Tổng số mặt hàng:</span>
+                    <span className="text-slate-900 font-black">{newSOItems.filter(i => i.product_code).length}</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-slate-500 text-sm font-bold uppercase tracking-wider">Tổng cộng giá trị đơn:</span>
+                    <span className="text-2xl font-black text-primary">
+                      {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(
+                        newSOItems.reduce((acc, curr) => acc + (curr.qty * curr.unit_price), 0)
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Form Buttons */}
+              <div className="flex justify-end gap-3 pt-4">
+                <button 
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="px-6 py-3 rounded-2xl border border-slate-200 bg-white text-slate-600 font-bold text-xs hover:bg-slate-100 transition-all uppercase tracking-widest active:scale-95 shadow-sm"
+                >
+                  Hủy bỏ
+                </button>
+                <button 
+                  type="submit"
+                  disabled={loading}
+                  className="px-8 py-3 rounded-2xl bg-primary hover:bg-blue-700 disabled:bg-slate-300 text-white font-black text-xs shadow-xl shadow-primary/20 transition-all flex items-center gap-2 uppercase tracking-widest active:scale-95"
+                >
+                  <span className="material-icons-round text-sm">check_circle</span>
+                  <span>Xác nhận & Lưu đơn</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {toast && (
         <div className="fixed top-6 right-6 z-[999] flex items-center gap-3 bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 rounded-2xl px-5 py-4 shadow-2xl animate-in slide-in-from-top-4 duration-300">

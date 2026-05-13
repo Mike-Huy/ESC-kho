@@ -43,6 +43,7 @@ import OpAudit from './pages/OpAudit';
 import OpReplenish from './pages/OpReplenish';
 import OpTransfer from './pages/OpTransfer';
 import RoadMap from './pages/RoadMap';
+import HubApp from './pages/HubApp';
 
 const App: React.FC = () => {
   const [activePage, setActivePage] = useState<PageType>('dashboard');
@@ -77,7 +78,7 @@ const App: React.FC = () => {
           // Step 2: Fetch latest staff profile
           const { data: staffProfile } = await supabase
             .from(TABLE('staff_profiles'))
-            .select('id, user_id, erp_role_id, is_super_admin, allowed_modules, website_id, wh_code')
+            .select('id, user_id, erp_role_id, is_super_admin, allowed_modules, website_id, wh_code, dept_id')
             .eq('user_id', parsedUser.id)
             .single();
 
@@ -157,6 +158,7 @@ const App: React.FC = () => {
             roleName: roleName || undefined,
             roleColor: roleColor || undefined,
             wh_code: staffProfile?.wh_code || null,
+            dept_id: staffProfile?.dept_id || null,
           };
 
           // Only update if there is actually a change to avoid infinite renders/flickers
@@ -191,6 +193,14 @@ const App: React.FC = () => {
       syncSession();
     }
   }, [activePage, user]);
+
+  // Force users of "Kho vận" department to 'hub_app' page
+  useEffect(() => {
+    if (user && user.dept_id === 1 && activePage !== 'hub_app') {
+      console.log('[Routing] Forcing Kho vận department user to Hub App');
+      setActivePage('hub_app');
+    }
+  }, [user, activePage]);
 
   const handleLogout = () => {
     localStorage.removeItem('wms_user');
@@ -270,6 +280,9 @@ const App: React.FC = () => {
 
       // Road Map
       case 'roadmap': return <RoadMap user={user} />;
+
+      // Hub App
+      case 'hub_app': return <HubApp user={user} />;
 
       // Nhân sự
       case 'hr_staff_list': return <StaffList onViewStaff={(id) => { setSelectedStaffId(id); setActivePage('hr_staff_profile'); }} />;

@@ -31,7 +31,9 @@ export type PageType =
   // Nhân sự
   | 'hr_staff_list' | 'hr_staff_profile' | 'hr_salary_level' | 'hr_shifts' | 'hr_policy'
   // Road Map
-  | 'roadmap';
+  | 'roadmap'
+  // Hub App
+  | 'hub_app';
 
 export interface NavItem {
   id: PageType | string;

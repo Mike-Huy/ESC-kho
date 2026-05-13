@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import OrderList from './OrderList';
 
 interface OutboundManagerProps {
@@ -8,6 +8,11 @@ interface OutboundManagerProps {
 
 const OutboundManager: React.FC<OutboundManagerProps> = ({ onViewDetail, initialTab = 'outbound_list' }) => {
   const [activeTab, setActiveTab] = useState<'outbound_list' | 'outbound_pending' | 'outbound_done' | 'outbound_cancel'>(initialTab);
+
+  // Keep activeTab in sync with initialTab prop when routes change
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   const tabs = [
     { id: 'outbound_list', label: 'Danh sách đơn xuất', icon: 'receipt_long' },

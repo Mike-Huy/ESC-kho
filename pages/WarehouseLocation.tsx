@@ -48,11 +48,21 @@ const WarehouseLocation: React.FC = () => {
 
   const fetchWarehousesList = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from(TABLE('warehouse'))
         .select('*')
         .contains('website_id', [APP_CONFIG.WEBSITE_ID])
         .order('id', { ascending: true });
+
+      const savedUser = localStorage.getItem('wms_user');
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        if (user && !user.isSuperAdmin && user.wh_code) {
+          query = query.eq('wh_code', user.wh_code);
+        }
+      }
+
+      const { data, error } = await query;
       if (!error && data) {
         setWarehouses(data);
       }
@@ -64,20 +74,41 @@ const WarehouseLocation: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
+      const savedUser = localStorage.getItem('wms_user');
+      let userWhCode = '';
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        if (user && !user.isSuperAdmin && user.wh_code) {
+          userWhCode = user.wh_code;
+        }
+      }
+
       if (activeTab === 'warehouse') {
-        const { data, error } = await supabase
+        let query = supabase
           .from(TABLE('warehouse'))
           .select('*')
           .contains('website_id', [APP_CONFIG.WEBSITE_ID])
           .order('id', { ascending: true });
+
+        if (userWhCode) {
+          query = query.eq('wh_code', userWhCode);
+        }
+
+        const { data, error } = await query;
         if (error) throw error;
         setWarehouses(data || []);
       } else {
-        const { data, error } = await supabase
+        let query = supabase
           .from(TABLE('wh_location'))
           .select('*')
           .contains('website_id', [APP_CONFIG.WEBSITE_ID])
           .order('location_code', { ascending: true });
+
+        if (userWhCode) {
+          query = query.eq('wh_code', userWhCode);
+        }
+
+        const { data, error } = await query;
         if (error) throw error;
         setLocations(data || []);
       }

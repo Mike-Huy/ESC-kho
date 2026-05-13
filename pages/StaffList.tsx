@@ -27,6 +27,7 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingStaffId, setEditingStaffId] = useState<number | null>(null);
+  const [currentUser, setCurrentUser] = useState<any | null>(null);
   
   // Form fields
   const [newStaff, setNewStaff] = useState({
@@ -115,6 +116,14 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
   };
 
   useEffect(() => {
+    const savedUser = localStorage.getItem('wms_user');
+    if (savedUser) {
+      try {
+        setCurrentUser(JSON.parse(savedUser));
+      } catch (err) {
+        console.error('Error parsing wms_user from localStorage:', err);
+      }
+    }
     fetchStaff();
     fetchDepartments();
     fetchWarehouses();
@@ -144,12 +153,18 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
         if (userError) throw userError;
 
         // 2. Update staff_profiles
+        const profileUpdate: any = {
+          dept_id: parseInt(newStaff.deptId)
+        };
+
+        // Only Super Admin can change warehouse assignments
+        if (currentUser?.isSuperAdmin) {
+          profileUpdate.wh_code = newStaff.whCode || null;
+        }
+
         const { error: profileError } = await supabase
           .from(TABLE('staff_profiles'))
-          .update({
-            dept_id: parseInt(newStaff.deptId),
-            wh_code: newStaff.whCode || null
-          })
+          .update(profileUpdate)
           .eq('user_id', editingStaffId);
 
         if (profileError) throw profileError;
@@ -173,15 +188,21 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
         if (userError) throw userError;
 
         // 2. Insert into staff_profiles
+        const profileInsert: any = {
+          user_id: userData.id,
+          dept_id: parseInt(newStaff.deptId),
+          website_id: [APP_CONFIG.WEBSITE_ID],
+          position: 'Nhân viên'
+        };
+
+        // Only Super Admin can assign initial warehouse
+        if (currentUser?.isSuperAdmin) {
+          profileInsert.wh_code = newStaff.whCode || null;
+        }
+
         const { error: profileError } = await supabase
           .from(TABLE('staff_profiles'))
-          .insert([{
-            user_id: userData.id,
-            dept_id: parseInt(newStaff.deptId),
-            wh_code: newStaff.whCode || null,
-            website_id: [APP_CONFIG.WEBSITE_ID],
-            position: 'Nhân viên'
-          }]);
+          .insert([profileInsert]);
 
         if (profileError) throw profileError;
         alert('Thêm nhân viên thành công!');
@@ -456,14 +477,19 @@ const StaffList: React.FC<StaffListProps> = ({ onViewStaff }) => {
                     <select 
                       value={newStaff.whCode}
                       onChange={(e) => setNewStaff({...newStaff, whCode: e.target.value})}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-primary/20 outline-none font-bold text-slate-700"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-primary/20 outline-none font-bold text-slate-700 disabled:opacity-65"
+                      disabled={!currentUser?.isSuperAdmin}
                     >
                       <option value="">-- Cho phép xem tất cả Kho --</option>
                       {warehouses.map(wh => (
                         <option key={wh.wh_code} value={wh.wh_code}>{wh.wh_name} ({wh.wh_code})</option>
                       ))}
                     </select>
-                    <p className="text-[9px] text-slate-400 mt-1 font-bold uppercase tracking-wide px-1">Nếu chọn, user này sẽ chỉ nhìn thấy các đơn hàng và lượng tồn kho của riêng kho này.</p>
+                    <p className="text-[9px] text-slate-400 mt-1 font-bold uppercase tracking-wide px-1">
+                      {currentUser?.isSuperAdmin 
+                        ? 'Nếu chọn, user này sẽ chỉ nhìn thấy các đơn hàng và lượng tồn kho của riêng kho này.' 
+                        : 'Chỉ Super Admin mới có quyền phân quyền / thay đổi giới hạn kho hoạt động của nhân viên.'}
+                    </p>
                   </div>
                </div>
 
