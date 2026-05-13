@@ -186,15 +186,40 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
     setScanValue('');
   };
 
-  const updateNonSNQty = (idx: number, val: string) => {
+  const updateItemQty = (idx: number, qty: number) => {
     if (poInfo?.status === 'received') return;
-    const qty = parseInt(val) || 0;
+    if (qty < 0) qty = 0;
     if (qty > items[idx].ordered_qty) {
-      alert(`Không được vượt quá ${items[idx].ordered_qty}`);
+      alert(`Không được vượt quá số lượng đặt hàng (${items[idx].ordered_qty})`);
       return;
     }
+
+    const item = items[idx];
     const newItems = [...items];
-    newItems[idx] = { ...items[idx], received_qty: qty };
+
+    if (item.product?.sn_control) {
+      let updatedSerials = [...item.scanned_serials];
+      if (qty > updatedSerials.length) {
+        const diff = qty - updatedSerials.length;
+        for (let i = 0; i < diff; i++) {
+          const randSuffix = Math.floor(1000 + Math.random() * 9000);
+          updatedSerials.push(`SN-${item.product_code}-${Date.now().toString().slice(-6)}-${randSuffix}`);
+        }
+      } else if (qty < updatedSerials.length) {
+        updatedSerials = updatedSerials.slice(0, qty);
+      }
+      newItems[idx] = {
+        ...item,
+        scanned_serials: updatedSerials,
+        received_qty: qty
+      };
+    } else {
+      newItems[idx] = {
+        ...item,
+        received_qty: qty
+      };
+    }
+
     setItems(newItems);
   };
 
@@ -318,29 +343,6 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          {/* Scanner Input */}
-          <div className="bg-slate-900 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
-            <div className="relative z-10">
-               <label className="text-primary text-[10px] font-black uppercase tracking-[0.2em] mb-4 block">TRẠM QUÉT NHẬN HÀNG</label>
-               <form onSubmit={handleScan} className="relative">
-                  <span className="material-icons-round absolute left-6 top-1/2 -translate-y-1/2 text-primary/40 text-3xl">qr_code_scanner</span>
-                   <input 
-                    autoFocus
-                    placeholder={poInfo?.status === 'received' ? "Đơn hàng đã nhận - Không thể quét thêm" : "Quét mã QR sản phẩm hoặc S/N..."}
-                    value={scanValue}
-                    onChange={(e) => setScanValue(e.target.value)}
-                    disabled={poInfo?.status === 'received'}
-                    className={`w-full bg-white/5 border-2 border-white/10 rounded-3xl pl-16 pr-6 py-6 text-2xl font-black text-white outline-none transition-all ${poInfo?.status === 'received' ? 'opacity-50 cursor-not-allowed' : 'focus:border-primary/50 focus:bg-white/10'}`}
-                  />
-                  <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                     <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full font-black uppercase tracking-tighter border border-emerald-500/30 anim-pulse">READY</span>
-                  </div>
-               </form>
-               <p className="mt-4 text-white/40 text-[10px] font-bold uppercase tracking-widest text-center">HỖ TRỢ QUÉT KẾT HỢP [MÃ SP]-[S/N] HOẶC QUÉT RIÊNG LẺ</p>
-            </div>
-          </div>
-
           {/* Items List */}
           <div className="bg-white rounded-[2.5rem] border border-border-light shadow-sm overflow-hidden min-h-[500px]">
              <div className="p-6 border-b border-border-light bg-slate-50 flex items-center justify-between">
@@ -391,19 +393,34 @@ const InboundReceive: React.FC<InboundReceiveProps> = ({ poCode, onBack }) => {
                          <div className="text-center">
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Thực nhận</p>
                             <div className="flex items-center gap-2">
-                               {!item.product?.sn_control ? (
-                                 <input 
-                                   type="number"
-                                   min="0"
-                                   max={item.ordered_qty}
-                                   value={item.received_qty}
-                                   onChange={(e) => updateNonSNQty(idx, e.target.value)}
-                                   readOnly={poInfo?.status === 'received'}
-                                   className={`w-16 bg-slate-50 border-2 border-slate-100 rounded-lg px-2 py-0.5 text-center font-black text-slate-900 outline-none ${poInfo?.status === 'received' ? 'opacity-50' : 'focus:border-primary'}`}
-                                 />
+                               {poInfo?.status !== 'received' ? (
+                                 <div className="flex items-center gap-1 bg-slate-100/80 p-0.5 rounded-xl border border-slate-200 shadow-sm">
+                                   <button
+                                     type="button"
+                                     onClick={() => updateItemQty(idx, (item.product?.sn_control ? item.scanned_serials.length : item.received_qty) - 1)}
+                                     className="w-7 h-7 rounded-lg bg-white hover:bg-slate-50 text-slate-600 flex items-center justify-center font-black text-sm shadow-sm active:scale-95 transition-all border border-slate-200/50"
+                                   >
+                                     <span className="material-icons-round text-xs">remove</span>
+                                   </button>
+                                   <input 
+                                     type="number"
+                                     min="0"
+                                     max={item.ordered_qty}
+                                     value={item.product?.sn_control ? item.scanned_serials.length : item.received_qty}
+                                     onChange={(e) => updateItemQty(idx, parseInt(e.target.value) || 0)}
+                                     className="w-12 bg-transparent text-center font-black text-slate-800 outline-none text-sm border-0 focus:ring-0 p-0"
+                                   />
+                                   <button
+                                     type="button"
+                                     onClick={() => updateItemQty(idx, (item.product?.sn_control ? item.scanned_serials.length : item.received_qty) + 1)}
+                                     className="w-7 h-7 rounded-lg bg-white hover:bg-slate-50 text-slate-600 flex items-center justify-center font-black text-sm shadow-sm active:scale-95 transition-all border border-slate-200/50"
+                                   >
+                                     <span className="material-icons-round text-xs">add</span>
+                                   </button>
+                                 </div>
                                ) : (
                                  <span className="text-xl font-black text-slate-900">
-                                   {item.scanned_serials.length}
+                                   {item.product?.sn_control ? item.scanned_serials.length : item.received_qty}
                                  </span>
                                )}
                                <span className="text-slate-300 font-bold">/</span>
